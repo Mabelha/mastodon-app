@@ -1,6 +1,8 @@
 var nav = require("assets/js/navigation");
 nav.menuVisible.value = 'Visible';
 
+var data = require( 'assets/js/data' );
+
 var Observable = require("FuseJS/Observable");
 
 var errorInSending = Observable( false );
@@ -14,11 +16,10 @@ var txtToToot = this.Parameter.map( function( param ) {
     return param.account ? '@' + param.account + ' ' : '';
 });
 
-// var cameraRoll = require("FuseJS/CameraRoll");
+var cameraRoll = require("FuseJS/CameraRoll");
 
 function doToot() {
 
-  var data = require( 'assets/js/data' );
   data.sendPost( txtToToot.value, inReplyToPostId.value ).then( function( result ) {
 
     txtToToot.value = '';
@@ -40,7 +41,8 @@ function selectImage() {
 
   cameraRoll.getImage()
       .then(function(image) {
-          console.log( JSON.stringify( image ) );
+
+          data.sendImage( image );
 
       }, function(error) {
           console.log( error );
@@ -51,6 +53,6 @@ module.exports = {
   inReplyToPostId: inReplyToPostId,
   txtToToot: txtToToot,
   doToot: doToot,
-  errorInSending: errorInSending
-  // selectImage: selectImage
+  errorInSending: errorInSending,
+  selectImage: selectImage
 }

@@ -2,6 +2,7 @@
 
   <Router ux:Dependency="router" />
   <JavaScript File="TimelineView.js" />
+  <JavaScript File="Part.PostCard.js" />
 
   <ScrollView LayoutMode="PreserveVisual" SnapMinTransform="false">
     <StackPanel Orientation="Vertical">

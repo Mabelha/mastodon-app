@@ -2,6 +2,7 @@
 
   <Router ux:Dependency="router" />
   <JavaScript File="NotificationsView.js" />
+  <JavaScript File="Part.PostCard.js" />
 
   <ScrollView LayoutMode="PreserveVisual">
     <StackPanel Orientation="Vertical">

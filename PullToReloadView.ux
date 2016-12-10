@@ -1,0 +1,17 @@
+<Panel ux:Class="PullDownReload" ClipToBounds="True">
+
+	<Panel ux:Name="loadMsg" Height="48" Background="#777" Visibility="Collapsed">
+  	<Text Margin="0,12,0,12" Alignment="Center" Font="Italic" TextColor="#fff">Checkin' for new posts...</Text>
+	</Panel>
+
+	<PullToReload IsLoading="{isLoading}" ReloadHandler="{reloadHandler}">
+		<State ux:Binding="Pulling">
+			<Change loadMsg.Visibility="Visible" />
+		</State>
+		<State ux:Binding="PulledPastThreshold">
+		</State>
+		<State ux:Binding="Loading">
+			<Change loadMsg.Visibility="Visible" />
+		</State>
+	</PullToReload>
+</Panel>

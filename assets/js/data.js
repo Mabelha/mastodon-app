@@ -1,5 +1,7 @@
 var Observable      = require("FuseJS/Observable");
 var Storage         = require("FuseJS/Storage");
+var Uploader        = require("Uploader");
+
 var FILE_DATACACHE  = 'data.cache.json';
 var FILE_FAVOCACHE  = 'favourites.data.cache.json';
 
@@ -92,7 +94,7 @@ function loadNotificationsTimeLine() {
 
 function loadUserTimeLine( userid ) {
   // console.log( JSON.stringify( userid ) );
-  loadTimeline( 'user', userid );
+  loadTimeline( 'user', userid.value );
 }
 
 function loadUserFavourites() {
@@ -188,6 +190,78 @@ function loadTimeline( _type, _id ) {
     }
 
   );
+
+}
+
+function sendImageAlternate( _imgObj ) {
+
+  var reader  = new FileReader();
+  reader.onloadend = function() {
+    doImageUpload( reader.result );
+  };
+  reader.readAsDataURL( _imgObj );
+
+}
+
+function doImageUpload( b64 ) {
+
+  try {
+    var xhr = new XMLHttpRequest();
+    // xhr.addEventListener("progress",function(e){ uploadProgress(e); }, false);
+    xhr.addEventListener("load",function(e){ uploadDone(e); }, false);
+    xhr.addEventListener("error",function(e){ uploadError(e); }, false);
+    xhr.open("POST","https://mastodon.social/api/v1/media",true);
+    xhr.setRequestHeader("Content-Type", "application/json");
+    xhr.setRequestHeader("Authorization", "Bearer " + AccessToken.value );
+    // var parametros = {'image':image,'id': ElCliente.value.IDCliente};
+    xhr.send( b64 );
+  } catch( err ) {
+    console.log( JSON.stringify( err ) );
+  }
+}
+
+function uploadDone(e) {
+  console.log( "result: " + JSON.stringify( e.target ) );
+  if ( e.target.status === 200) {
+    console.log("successfull return");
+  }
+}
+
+function uploadError( e ) {
+    console.log("error: " + JSON.stringify( e.target ) );
+}
+
+// function uploadProgress(e) {
+//   console.log("hay progreso");
+//   if (e.lengthComputable) {
+//     var pc = Math.round(e.loaded * 100 / e.Total);
+//     console.log("Subiendo: " + pc + "%");
+//   } else {
+//     console.log("No computable");
+//   }
+// }
+
+function sendImage( _imgObj ) {
+
+  try {
+
+    // console.log( JSON.stringify( _imgObj ) );
+    return Uploader.send(
+      _imgObj.path,
+      'https://mastodon.social/api/v1/media',
+      AccessToken.value
+    ).then( function( response ) {
+      console.log( "upload complete." );
+      console.log( JSON.stringify( response ) );
+    } ).catch( function( err ) {
+      console.log( "upload error." );
+      console.log( JSON.stringify( err ) );
+    } );
+
+  } catch( _err ) {
+    console.log( "error catched when calling Upload.uno." );
+    console.log( JSON.stringify( _err ) );
+  }
 
 }
 
@@ -373,6 +447,8 @@ function preparePostContent( postdata ) {
 
   console.log( JSON.stringify( postdata ) );
 
+  // @<a href=\"http://sn.gunmonkeynet.net/index.php/user/1\">nybill</a> eek, well glad it was finally noticed.
+
   // replace HTML codes like &amp; and &gt;
   var _content = HtmlEnt.decode( postdata.content );
 
@@ -381,6 +457,7 @@ function preparePostContent( postdata ) {
   var _uris = _content.match( regex );
   if ( _uris && ( _uris.length > 0 ) ) {
     for ( var i in _uris ) {
+      console.log( _uris[ i ] );
       _content = _content.replace( _uris[ i ], '[[[[' + i );
     }
   }
@@ -388,53 +465,68 @@ function preparePostContent( postdata ) {
   // now remove al HTML tags
   _content = _content.replace( /<[^>]+>/ig, '' );
 
+  console.log( ' >>>>>>>>>>>>>>> replaced uris in content with [[[[x' );
+  console.log( _content );
+  console.log( ' <<<<<<<<<<<<<<<' );
+
   var result = Observable();
 
   var _words = _content.split( /\s/g );
 
-  // to make this construction as responsive as possible,
-  // I string words together until a link is found.
-  // var _stringWordsTogether = '';
   for ( var i in _words ) {
-    if ( '[[[[' == _words[ i ].substring( 0, 4 ) ) {
-      // we hit a link. Anything in plaintext yet?
-      // if ( '' != _stringWordsTogether ) {
-      //   result.add( { word: _stringWordsTogether } );
-      //   _stringWordsTogether = '';
-      // }
+    if ( -1 === _words[ i ].indexOf( '[[[[' ) ) {
 
-      // now add the link
-      var _linkId = Number.parseInt( _words[ i ].replace( '[[[[', '' ) );
+      // this is not a link, add it as a word
+      // click event in Part.PostCard can send it to the post detail screen
+      result.add( { word: _words[ i ], makeBold: false } );
+
+    } else {
+
+      // link found! but: what kind of link?
+      // bug fix: if e.g. a mention links to another server, it's a link with a @ before it
+      var _charBeforeLink = ( '[[[[' == _words[ i ].substring( 1, 5 ) ) ? _words[ i ].substring( 0, 1 ) : '';
+      var _linkId = Number.parseInt( _words[ i ].match(/\d/g).join('') );
       var _linkTxt = _uris[ _linkId ].replace( /<[^>]+>/ig, '' );
-      // console.log( _linkTxt );
 
-      var _mentioner = postdata.mentions.filter( function (obj) { return '@' + obj.acct === _linkTxt; });
+      console.log( _uris[ _linkId ] );
+      console.log( 'link text: ' + _linkTxt );
+      console.log( 'start char: ' + _charBeforeLink );
+
+      // first: mentions
+      var _mentioner = postdata.mentions.filter( function (obj) { return ( 0 ==  _linkTxt.indexOf( '@' + obj.acct ) ); } );
       if ( _mentioner.length > 0 ) {
         result.add( { mention: true, word: _linkTxt, makeBold: true, userid: _mentioner[0].id } );
-      } else if ( postdata.tags.some( function (obj) { return '@' + obj.hashtag === _linkTxt; }) ) {
-        // TODO add hashtags
-      } else if ( postdata.media_attachments.some( function (obj) { return ( _linkTxt.indexOf( obj.id ) > -1 ); }) ) {
-        // do not show the urls for media_attachments in the content
       } else {
-        // TODO add actual link to array
-        console.log( _uris[ _linkId ] );
-        var _linkstart = _uris[ _linkId ].indexOf( 'href="' ) + 6;
-        // console.log( _linkstart );
-        var _linkend = _uris[ _linkId ].indexOf( '"', _linkstart );
-        // console.log( _linkEnd );
-        var _linkUrl = _uris[ _linkId ].substring( _linkstart, _linkend );
-        console.log( _linkUrl );
-        result.add( { link: true, word: _linkTxt, uri: _linkUrl, makeBold: true } );
+
+        // not a mention. maybe a hashtag?
+        var _tag = postdata.tags.filter( function (obj) { return '#' + obj.name === _linkTxt; } );
+        if ( _tag.length > 0 ) {
+
+          // TODO add hashtags
+          result.add( { word: _linkTxt, makeBold: false } );
+
+        } else if ( postdata.media_attachments.some( function (obj) { return ( _linkTxt.indexOf( obj.id ) > -1 ); } ) ) {
+
+          // do not show the urls for media_attachments in the content
+
+        } else if ( ( '@' == _charBeforeLink ) || ( '#' == _charBeforeLink ) ) {
+          // mentions on some (older Statusnet installations, says https://community.highlandarrow.com/notice/469679 )
+          // are a link with an @ before it. TODO One little thing: no user id from the mentions array
+          result.add( { word: _charBeforeLink + _linkTxt, makeBold: false } );
+
+        } else {
+
+          // everything else not true. probably just a link
+          // click event sends it to the system browser
+          var _linkstart = _uris[ _linkId ].indexOf( 'href="' ) + 6;
+          var _linkend = _uris[ _linkId ].indexOf( '"', _linkstart );
+          var _linkUrl = _uris[ _linkId ].substring( _linkstart, _linkend );
+          result.add( { link: true, word: _linkTxt, uri: _linkUrl, makeBold: true } );
+
+        }
       }
-    } else {
-      //_stringWordsTogether += ' ' + _words[ i ];
-      result.add( { word: _words[ i ], makeBold: false } );
     }
   }
-
-  // if ( '' != _stringWordsTogether ) {
-  //   result.add( { word: _stringWordsTogether } );
-  // }
 
   return result;
 
@@ -534,6 +626,7 @@ module.exports = {
   loadUserFavourites: loadUserFavourites,
   refreshAllTimelines: refreshAllTimelines,
   sendPost: sendPost,
+  sendImage: sendImage,
   rePost: rePost,
   favouritePost: favouritePost,
   posts: posts,

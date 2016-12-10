@@ -1,6 +1,7 @@
 <Page ux:Class="PublicTimelinePage">
   <Router ux:Dependency="router" />
   <JavaScript File="PublicTimelineView.js" />
+  <JavaScript File="Part.PostCard.js" />
 
   <ScrollView LayoutMode="PreserveVisual">
     <StackPanel Orientation="Vertical">
