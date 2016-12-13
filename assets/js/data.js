@@ -1,6 +1,5 @@
 var Observable      = require("FuseJS/Observable");
 var Storage         = require("FuseJS/Storage");
-var Uploader        = require("Uploader");
 
 var FILE_DATACACHE  = 'data.cache.json';
 var FILE_FAVOCACHE  = 'favourites.data.cache.json';
@@ -21,8 +20,14 @@ var posts = {
 // for showing a userprofile on UserProfileView.ux
 var userprofile = Observable();
 
-var msg = Observable('');
-var loading = Observable( false );
+var loading         = Observable( false );
+var loadingError    = Observable( false );
+var msg             = Observable( '' );
+function resetErrorMsg() {
+  console.log( 'resetting error data' );
+  loadingError.value = false;
+  msg.value = '';
+}
 
 var AccessToken     = Observable( false );
 var at_file         = "access_code.json";
@@ -50,7 +55,7 @@ function saveToCache() {
 
 function saveAccessToken( token ) {
   AccessToken.value = token.access_token;
-  return Storage.writeSync( at_file, token );
+  return Storage.writeSync( at_file, JSON.stringify( token ) );
 }
 
 function loadAccessToken( ) {
@@ -61,7 +66,7 @@ function loadAccessToken( ) {
 
   try {
     var token = Storage.readSync( at_file );
-    console.log( 'token from file: ' + token );
+    // console.log( 'token from file: ' + token );
   }
   catch( e ) {
     return false;
@@ -71,9 +76,9 @@ function loadAccessToken( ) {
     return false;
   } else {
     token = JSON.parse( token );
-    for ( var i in token ) {
-      console.log( i + ': ' + token[i] );
-    }
+    // for ( var i in token ) {
+    //   console.log( i + ': ' + token[i] );
+    // }
     AccessToken.value = token.access_token;
     return true;
   }
@@ -113,7 +118,7 @@ function loadUserProfile( _userid ) {
         // TODO show this has gone wrong
         console.log( 'error in loading user profile: ' + JSON.stringify( result ) );
       } else {
-        console.log( 'loaded user profile: ' + JSON.stringify( result ) );
+        // console.log( 'loaded user profile: ' + JSON.stringify( result ) );
         var _userprofile = result.userprofile;
         _userprofile.note = HtmlEnt.decode( _userprofile.note );
         _userprofile.note = _userprofile.note.replace( /<[^>]+>/ig, '' );
@@ -141,6 +146,8 @@ function refreshAllTimelines() {
 function loadTimeline( _type, _id ) {
 
   loading.value = true;
+  loadingError.value = false;
+  msg.value = '';
 
   if ( 'user' != _type ) {
     loadFromCache( _type );
@@ -181,25 +188,15 @@ function loadTimeline( _type, _id ) {
       saveToCache();
       loading.value = false;
 
-    }
-  ).catch(
+    },
 
     function( error ) {
-      console.log( JSON.parse( error ) );
       loading.value = false;
+      loadingError.value = true;
+      msg.value = 'New posts could not be loaded.';
     }
 
   );
-
-}
-
-function sendImageAlternate( _imgObj ) {
-
-  var reader  = new FileReader();
-  reader.onloadend = function() {
-    doImageUpload( reader.result );
-  };
-  reader.readAsDataURL( _imgObj );
 
 }
 
@@ -231,41 +228,18 @@ function uploadError( e ) {
     console.log("error: " + JSON.stringify( e.target ) );
 }
 
-// function uploadProgress(e) {
-//   console.log("hay progreso");
-//   if (e.lengthComputable) {
-//     var pc = Math.round(e.loaded * 100 / e.Total);
-//     console.log("Subiendo: " + pc + "%");
-//   } else {
-//     console.log("No computable");
-//   }
-// }
-
 function sendImage( _imgObj ) {
 
-  try {
-
-    // console.log( JSON.stringify( _imgObj ) );
-    return Uploader.send(
-      _imgObj.path,
-      'https://mastodon.social/api/v1/media',
-      AccessToken.value
-    ).then( function( response ) {
-      console.log( "upload complete." );
-      console.log( JSON.stringify( response ) );
-    } ).catch( function( err ) {
-      console.log( "upload error." );
-      console.log( JSON.stringify( err ) );
-    } );
-
-  } catch( _err ) {
-    console.log( "error catched when calling Upload.uno." );
-    console.log( JSON.stringify( _err ) );
-  }
+  var Uploader = require("Uploader");
+  return Uploader.send(
+    _imgObj.path,
+    'https://mastodon.social/api/v1/media',
+    AccessToken.value
+  );
 
 }
 
-function sendPost( _txt, _inreplyto ) {
+function sendPost( _txt, _inreplyto, _media ) {
 
   loading.value = true;
 
@@ -273,12 +247,16 @@ function sendPost( _txt, _inreplyto ) {
     _inreplyto = 0;
   }
 
+  if ( arguments.length < 3 ) {
+    _media = [];
+  }
+
   return new Promise( function( resolve, reject ) {
 
     var _resolve = resolve;
     var _reject = reject;
 
-    api.sendPost( _txt, _inreplyto, AccessToken.value ).then(
+    api.sendPost( _txt, _inreplyto, _media, AccessToken.value ).then(
 
       function( data ) {
 
@@ -445,7 +423,7 @@ function MastodonPost( info ) {
 
 function preparePostContent( postdata ) {
 
-  console.log( JSON.stringify( postdata ) );
+  // console.log( JSON.stringify( postdata ) );
 
   // @<a href=\"http://sn.gunmonkeynet.net/index.php/user/1\">nybill</a> eek, well glad it was finally noticed.
 
@@ -457,7 +435,7 @@ function preparePostContent( postdata ) {
   var _uris = _content.match( regex );
   if ( _uris && ( _uris.length > 0 ) ) {
     for ( var i in _uris ) {
-      console.log( _uris[ i ] );
+      // console.log( _uris[ i ] );
       _content = _content.replace( _uris[ i ], '[[[[' + i );
     }
   }
@@ -465,9 +443,9 @@ function preparePostContent( postdata ) {
   // now remove al HTML tags
   _content = _content.replace( /<[^>]+>/ig, '' );
 
-  console.log( ' >>>>>>>>>>>>>>> replaced uris in content with [[[[x' );
-  console.log( _content );
-  console.log( ' <<<<<<<<<<<<<<<' );
+  // console.log( ' >>>>>>>>>>>>>>> replaced uris in content with [[[[x' );
+  // console.log( _content );
+  // console.log( ' <<<<<<<<<<<<<<<' );
 
   var result = Observable();
 
@@ -488,9 +466,9 @@ function preparePostContent( postdata ) {
       var _linkId = Number.parseInt( _words[ i ].match(/\d/g).join('') );
       var _linkTxt = _uris[ _linkId ].replace( /<[^>]+>/ig, '' );
 
-      console.log( _uris[ _linkId ] );
-      console.log( 'link text: ' + _linkTxt );
-      console.log( 'start char: ' + _charBeforeLink );
+      // console.log( _uris[ _linkId ] );
+      // console.log( 'link text: ' + _linkTxt );
+      // console.log( 'start char: ' + _charBeforeLink );
 
       // first: mentions
       var _mentioner = postdata.mentions.filter( function (obj) { return ( 0 ==  _linkTxt.indexOf( '@' + obj.acct ) ); } );
@@ -630,7 +608,9 @@ module.exports = {
   rePost: rePost,
   favouritePost: favouritePost,
   posts: posts,
-  msg: msg,
   loading: loading,
+  loadingError: loadingError,
+  msg: msg,
+  resetErrorMsg: resetErrorMsg,
   userprofile: userprofile
 }

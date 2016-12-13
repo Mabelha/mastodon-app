@@ -19,7 +19,7 @@
   <bool ux:Property="show_dimmed" />
 
   <WhileTrue Value="{isReblog}">
-    <DockPanel Margin="0,8,0,0">
+    <DockPanel Margin="0,4,0,8">
       <FaRepost Color="#fff" FontSize="16" Margin="36,0,0,0" Dock="Left" />
       <StackPanel Orientation="Horizontal" Margin="8,1,0,0">
         <ParagraphText Color="#fff" FontSize="14" Value="{Property pc.reblogname}" Margin="0,0,5,0" />
@@ -107,4 +107,6 @@
     </StackPanel>
 
   </DockPanel>
+
+  <Rectangle Height="1" Fill="#555" Margin="2,16,8,0" />
 </StackPanel>

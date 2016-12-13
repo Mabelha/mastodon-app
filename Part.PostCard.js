@@ -1,5 +1,6 @@
 function replyToPost( args ) {
-  router.push( "write", { postid: args.data.id, account: args.data.account.username } );
+  // TODO make this work for notifications timeline
+  router.push( "write", { postid: args.data.id, firstup: args.data.account.acct, mentions: args.data.mentions } );
 }
 
 function rePost( args ) {

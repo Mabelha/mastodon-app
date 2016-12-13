@@ -1,6 +1,5 @@
 var nav = require("assets/js/navigation");
 nav.menuVisible.value = 'Visible';
-nav.showBackButton.value = true;
 
 var Observable = require("FuseJS/Observable");
 

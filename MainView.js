@@ -37,5 +37,8 @@ module.exports = {
   goWrite: goWrite,
   goPublic: goPublic,
   loading: data.loading,
-  refreshData: refreshData
+  refreshData: refreshData,
+  hidePopup: data.resetErrorMsg,
+  loadingError: data.loadingError,
+  msg: data.msg
 }

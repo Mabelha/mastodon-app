@@ -1,0 +1,24 @@
+<Panel ux:Class="Popup" ux:Name="self" Layer="Overlay" Visibility="Collapsed">
+  <string ux:Property="msg" />
+  <object ux:Property="hidePopup" />
+
+  <SolidColor Color="#0009" />
+
+  <DockPanel Width="250" Height="130" Opacity="1">
+    <Text Dock="Top" Value="{msg}" FontSize="14" Font="Regular" TextWrapping="Wrap" TextAlignment="Center" Margin="0,18,0,0" />
+    <Button Dock="Bottom" Margin="0,0,0,18">
+      <Text Value="Ok" TextColor="#282b37" FontSize="14" Font="Regular" Alignment="Center" />
+      <Clicked>
+        <Callback Handler="{hidePopup}" />
+      </Clicked>
+    </Button>
+    <Rectangle Color="#fffe" Layer="Background" CornerRadius="4" />
+  </DockPanel>
+  <WhileTrue Value="{loadingError}">
+    <Change self.Visibility = "Visible" />
+  </WhileTrue>
+  <WhileFalse Value="{loadingError}">
+    <Change self.Visibility = "Collapsed" />
+  </WhileFalse>
+
+</Panel>

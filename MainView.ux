@@ -34,16 +34,11 @@
     <StackPanel Dock="Top" Orientation="Horizontal" Visibility="{menuVisible}" Padding="0,8,0,6" Background="#484b57">
 
       <!-- logo or back button -->
-      <WhileFalse Value="{showBackButton}">
-        <Image File="assets/images/logo-mastodon.png" Width="24" Height="24" Margin="16,4,24,4" Clicked="{refreshData}">
-          <WhileTrue Value="{loading}">
-            <Spin Frequency="2" />
-          </WhileTrue>
-        </Image>
-      </WhileFalse>
-      <WhileTrue Value="{showBackButton}">
-        <Text Value="B" Color="#fff" Font="Bold" FontSize="13" Alignment="Center" Clicked="{goBack}" />
-      </WhileTrue>
+      <Image File="assets/images/logo-mastodon.png" Width="24" Height="24" Margin="16,4,24,4" Clicked="{refreshData}">
+        <WhileTrue Value="{loading}">
+          <Spin Frequency="2" />
+        </WhileTrue>
+      </Image>
 
       <!-- topmenu items -->
       <StackPanel Orientation="Horizontal">
@@ -75,6 +70,24 @@
       <UserProfilePage ux:Template="userprofile" router="router" />
       <PublicTimelinePage ux:Template="publictimeline" router="router" />
     </Navigator>
+
+    <Panel ux:Name="popup" Layer="Overlay" Visibility="Collapsed">
+      <SolidColor Color="#0009" />
+      <DockPanel Width="250" Height="130" Opacity="1">
+        <Text Dock="Top" Value="{msg}" FontSize="14" Font="Regular" TextWrapping="Wrap" TextAlignment="Center" Margin="0,18,0,0" />
+        <Button Dock="Bottom" Margin="0,0,0,18">
+          <Text Value="Ok" TextColor="#282b37" FontSize="14" Font="Regular" Alignment="Center" />
+          <Clicked Handler="{hidePopup}" />
+        </Button>
+        <Rectangle Color="#fffe" Layer="Background" CornerRadius="4" />
+      </DockPanel>
+      <WhileTrue Value="{loadingError}">
+        <Change popup.Visibility = "Visible" />
+      </WhileTrue>
+      <WhileFalse Value="{loadingError}">
+        <Change popup.Visibility = "Collapsed" />
+      </WhileFalse>
+    </Panel>
 
     <Android>
       <BottomBarBackground Dock="Bottom" />
