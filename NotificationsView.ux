@@ -1,4 +1,5 @@
 <Page ux:Class="NotificationsPage">
+  <Activated Handler="{init}" />
 
   <Router ux:Dependency="router" />
   <JavaScript File="NotificationsView.js" />
@@ -9,37 +10,29 @@
       <Each Items="{posts}">
 
         <WhileTrue Value="{isReblog}">
-          <StackPanel Orientation="Horizontal" Margin="8,8,0,0">
+          <StackPanel Orientation="Horizontal" Margin="36,8,0,0">
             <FaRepost Color="#fff" FontSize="16" />
             <ParagraphText FontSize="14" Color="#fff" Value="{account.display_name}" Margin="6,0,4,0" />
             <ParagraphText FontSize="14" Color="#fff">reblogged your post</ParagraphText>
           </StackPanel>
-          <PostCard id="{id}" timesince="{timesince}" in_reply_to_id="{in_reply_to_id}" sensitive="{sensitive}" account_username="{status.account.username}" account_acct="{status.account.acct}" account_display_name="{status.account.display_name}" account_avatar="{account.avatar}" media_attachments="{media_attachments}" content="{content}" reblogs_count="{reblogs_count}" favourites_count="{favourites_count}" favourited="{favourited}" isReblog="True" reblogged="{reblogged}" reblogname="{reblogname}" show_actions="False" show_dimmed="True" />
+          <PostCard router="router" id="{id}" timesince="{timesince}" in_reply_to_id="{in_reply_to_id}" sensitive="{sensitive}" account_username="{status.account.username}" account_acct="{status.account.acct}" account_display_name="{status.account.display_name}" account_avatar="{status.account.avatar}" media_attachments="{status.media_attachments}" content="{content}" contenttxt="contenttxt" reblogs_count="{reblogs_count}" favourites_count="{favourites_count}" favourited="{favourited}" reblogged="{reblogged}" isReblog="False" show_actions="False" show_dimmed="True" />
         </WhileTrue>
 
         <WhileTrue Value="{isMention}">
-          <StackPanel Orientation="Horizontal" Margin="8,8,0,0">
-            <FaReply Color="#fff" FontSize="16" />
-            <ParagraphText FontSize="14" Color="#fff" Value="{account.display_name}" Margin="6,0,4,0" />
-            <WhileString Value="{account.display_name}" MaxLength="0">
-              <ParagraphText FontSize="14" Color="#fff" Value="{account.acct}" Margin="6,0,4,0" />
-            </WhileString>
-            <ParagraphText FontSize="14" Color="#fff">mentioned you</ParagraphText>
-          </StackPanel>
-          <PostCard id="{id}" timesince="{timesince}" in_reply_to_id="{in_reply_to_id}" account_username="{account.username}" account_acct="{account.acct}" account_display_name="{account.display_name}" account_avatar="{account.avatar}" media_attachments="{media_attachments}" content="{content}" reblogs_count="{reblogs_count}" favourites_count="{favourites_count}" favourited="{favourited}" reblogged="{reblogged}" show_actions="True" />
+          <PostCard router="router" id="{id}" timesince="{timesince}" in_reply_to_id="{in_reply_to_id}" account_username="{account.username}" account_acct="{account.acct}" account_display_name="{account.display_name}" account_avatar="{account.avatar}" media_attachments="{media_attachments}" content="{content}" contenttxt="contenttxt" reblogs_count="{reblogs_count}" favourites_count="{favourites_count}" favourited="{favourited}" reblogged="{reblogged}" show_actions="True" />
         </WhileTrue>
 
         <WhileTrue Value="{isFavourite}">
-          <StackPanel Orientation="Horizontal" Margin="8,8,0,0">
+          <StackPanel Orientation="Horizontal" Margin="36,8,0,0">
             <FaStar Color="#fff" FontSize="16" />
             <ParagraphText FontSize="14" Color="#fff" Value="{account.display_name}" Margin="6,0,4,0" />
             <ParagraphText FontSize="14" Color="#fff">favourited your post</ParagraphText>
           </StackPanel>
-          <PostCard id="{id}" timesince="{timesince}" in_reply_to_id="{in_reply_to_id}" account_username="{status.account.username}" account_acct="{status.account.acct}" account_display_name="{status.account.display_name}" account_avatar="{status.account.avatar}" media_attachments="{media_attachments}" content="{content}" reblogs_count="{reblogs_count}" favourites_count="{favourites_count}" favourited="{favourited}" reblogged="{reblogged}" reblogname="{reblogname}" show_actions="False" show_dimmed="True" />
+          <PostCard router="router" id="{id}" timesince="{timesince}" in_reply_to_id="{in_reply_to_id}" account_username="{status.account.username}" account_acct="{status.account.acct}" account_display_name="{status.account.display_name}" account_avatar="{status.account.avatar}" media_attachments="{media_attachments}" content="{content}" contenttxt="{contenttxt}" reblogs_count="{reblogs_count}" favourites_count="{favourites_count}" favourited="{favourited}" reblogged="{reblogged}" reblogname="{reblogname}" show_actions="False" show_dimmed="True" />
         </WhileTrue>
 
         <WhileTrue Value="{isFollow}">
-          <StackPanel Orientation="Horizontal" Margin="8,8,0,0">
+          <StackPanel Orientation="Horizontal" Margin="36,8,0,0">
             <FaFollow Color="#fff" FontSize="16" />
             <ParagraphText FontSize="14" Color="#fff" Value="{account.display_name}" Margin="6,0,4,0" />
             <ParagraphText FontSize="14" Color="#fff">joins you on your Mastodon travels</ParagraphText>
@@ -48,12 +41,20 @@
             <Image Url="{account.avatar}" Width="54" Margin="0,0,8,0" Alignment="TopLeft" Dock="Left" />
             <ParagraphText FontSize="14" Color="#fff" Value="{account.note}" TextWrapping="Wrap" />
           </DockPanel>
+
+          <Rectangle Height="1" Fill="#555" Margin="2,4,8,4" />
+
         </WhileTrue>
 
       </Each>
-      <WhileEmpty Items="{posts}">
-        <Text Margin="0,64,0,0" Alignment="Center" Font="Italic" TextColor="#ffffff">No notifications found.</Text>
-      </WhileEmpty>
+      <WhileTrue Value="{loading}">
+        <Text Margin="0,64,0,0" Alignment="Center" Font="Italic" TextColor="#fff">Loading notifications...</Text>
+      </WhileTrue>
+      <WhileFalse Value="{loading}">
+        <WhileEmpty Items="{posts}">
+          <Text Margin="0,64,0,0" Alignment="Center" Font="Italic" TextColor="#fff">No notifications found.</Text>
+        </WhileEmpty>
+      </WhileFalse>
     </StackPanel>
   </ScrollView>
 

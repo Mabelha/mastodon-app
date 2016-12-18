@@ -12,7 +12,7 @@ function goNotifications() {
 }
 
 function goWrite() {
-  router.goto( 'write' );
+  router.push( 'write' );
 }
 
 function goPublic() {
@@ -20,14 +20,13 @@ function goPublic() {
 }
 
 function refreshData() {
-  data.refreshAllTimelines();
+  data.refresh();
 }
 
 var Lifecycle = require('FuseJS/Lifecycle');
 Lifecycle.on("enteringInteractive", function() {
   // app activated
-  console.log( 'refreshing all timelines' );
-  data.refreshAllTimelines();
+  refreshData();
 });
 
 module.exports = {
@@ -37,8 +36,8 @@ module.exports = {
   goWrite: goWrite,
   goPublic: goPublic,
   loading: data.loading,
-  refreshData: refreshData,
   hidePopup: data.resetErrorMsg,
   loadingError: data.loadingError,
-  msg: data.msg
+  msg: data.msg,
+  refreshData: refreshData
 }

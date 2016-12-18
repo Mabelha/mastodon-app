@@ -61,59 +61,59 @@ function sendPost( _txt, _inreplyto, _media_ids, access_token ) {
 
 }
 
-function loadPosts( posttype, access_token, id ) {
-
-  var endpoint = '';
-  switch ( posttype ) {
-    case 'home':
-      endpoint = 'api/v1/timelines/home';
-      break;
-    case 'notifications':
-      endpoint = '/api/v1/notifications';
-      break;
-    case 'user':
-      endpoint = '/api/v1/accounts/' + id + '/statuses';
-      break;
-    case 'public':
-    default:
-      endpoint = 'api/v1/timelines/public';
-      break;
-  }
-
-  // console.log( 'LD1: ' + endpoint );
-
-  return new Promise( function( resolve, reject ) {
-
-    // console.log( 'LD2' ); // + access_token );
-
-    fetch( BASE_URL + endpoint, {
-        method: 'GET',
-        headers: {
-            'Content-type': 'application/json',
-            'Authorization': 'Bearer ' + access_token
-        }
-    })
-    .then( function( resp ) {
-        // console.log( 'LD3: ' + resp.status );
-        if ( 200 == resp.status ) {
-            // console.log( 'LD3A' );
-            return resp.json();
-        } else {
-            console.log( 'api.loadPosts returned status ' + resp.status );
-            reject( 'Netwerk error: cannot fetch posts (1003)' );
-        }
-    })
-    .then( function( json ) {
-      // console.log( 'LD4' );
-      resolve( json );
-    })
-    .catch( function( err ) {
-      console.log( 'api.loadPosts caused error' );
-      reject( 'Netwerk error: cannot fetch posts (1004)' );
-    });
-  });
-
-}
+// function loadPosts( posttype, access_token, id ) {
+//
+//   var endpoint = '';
+//   switch ( posttype ) {
+//     case 'home':
+//       endpoint = 'api/v1/timelines/home';
+//       break;
+//     case 'notifications':
+//       endpoint = '/api/v1/notifications';
+//       break;
+//     case 'user':
+//       endpoint = '/api/v1/accounts/' + id + '/statuses';
+//       break;
+//     case 'public':
+//     default:
+//       endpoint = 'api/v1/timelines/public';
+//       break;
+//   }
+//
+//   console.log( 'LD1: ' + endpoint );
+//
+//   return new Promise( function( resolve, reject ) {
+//
+//     console.log( 'LD2: ' + access_token );
+//
+//     fetch( BASE_URL + endpoint, {
+//         method: 'GET',
+//         headers: {
+//             'Content-type': 'application/json',
+//             'Authorization': 'Bearer ' + access_token
+//         }
+//     })
+//     .then( function( resp ) {
+//         console.log( 'LD3: ' + resp.status );
+//         if ( 200 == resp.status ) {
+//             // console.log( 'LD3A' );
+//             return resp.json();
+//         } else {
+//             console.log( 'api.loadPosts returned status ' + resp.status );
+//             reject( 'Netwerk error: cannot fetch posts (1003)' );
+//         }
+//     })
+//     .then( function( json ) {
+//       console.log( 'LD4' );
+//       resolve( json );
+//     })
+//     .catch( function( err ) {
+//       console.log( 'api.loadPosts caused error' );
+//       reject( 'Netwerk error: cannot fetch posts (1004)' );
+//     });
+//   });
+//
+// }
 
 function rePost( _postId, access_token, unRepost ) {
 
@@ -153,49 +153,6 @@ function rePost( _postId, access_token, unRepost ) {
   });
 
   return repostEmitter.promiseOf( 'rePostEnded' );
-}
-
-function favouritePost( _postId, access_token, unFavourite ) {
-
-  if ( arguments.length < 3 ) {
-    var unFavourite = false;
-  }
-
-  var _apiAction = ( unFavourite ) ? 'unfavourite' : 'favourite';
-
-  // create promise
-  var favEmitter = new EventEmitter( 'favouritePostEnded' );
-
-  console.log( 'favourite: ' + _postId + '/' + _apiAction );
-
-  fetch( BASE_URL + 'api/v1/statuses/' + _postId + '/' + _apiAction, {
-      method: 'POST',
-      headers: {
-          'Content-type': 'application/json',
-          'Authorization': 'Bearer ' + access_token
-      }
-  })
-  .then( function( resp ) {
-      // console.log( 'LD3' );
-      if ( 200 == resp.status ) {
-          // console.log( 'LD3A' );
-          return resp.json();
-      } else {
-          // console.log( 'LD3B' );
-          favEmitter.emit( 'favouritePostEnded', { err: true } );
-      }
-  })
-  .then( function( json ) {
-    // console.log( 'LD4' );
-    favEmitter.emit( 'favouritePostEnded', { err: false, post: json } );
-  })
-  .catch( function( err ) {
-    // console.log( 'LD5' );
-    favEmitter.emit( 'favouritePostEnded', { err: true } );
-  });
-
-  return favEmitter.promiseOf( 'favouritePostEnded' );
-
 }
 
 function loadUserProfile( _userid, access_token ) {
@@ -325,10 +282,9 @@ parseUri.options = {
 };
 
 module.exports = {
-  loadPosts: loadPosts,
+  // loadPosts: loadPosts,
   sendPost: sendPost,
   rePost: rePost,
-  favouritePost: favouritePost,
   loadUserProfile: loadUserProfile,
   parseUri: parseUri,
   getAccessToken: getAccessToken

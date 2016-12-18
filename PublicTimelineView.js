@@ -4,13 +4,12 @@ nav.menuVisible.value = 'Visible';
 var Observable = require("FuseJS/Observable");
 
 var data = require( 'assets/js/data' );
-data.loadPublicTimeline();
 
-function goBack() {
-	router.goBack();
+function init() {
+  data.init( 'public' );
 }
 
 module.exports = {
-  posts: data.posts.public,
-  goBack: goBack
+  init: init,
+  posts: data.posts.public
 }

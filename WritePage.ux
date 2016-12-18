@@ -4,16 +4,17 @@
   <JavaScript File="WritePage.js" />
 
   <Panel>
-    <StackPanel Orientation="Vertical" Margin="8,16,8,32">
-      <TextView Value="{txtToToot}" Height="165" Background="#ddd" TextWrapping="Wrap" Padding="4">
+    <StackPanel Orientation="Vertical" Margin="8,8,8,32">
+      <TextView Value="{txtToToot}" Height="200" Background="#ddd" TextWrapping="Wrap" Padding="4" MaxLength="500">
         <WhileString Test="IsEmpty">
           <Text TextWrapping="Wrap" Margin="4">What's on your mind?</Text>
         </WhileString>
       </TextView>
+      <TextView Value="{txtLength}" Alignment="Right" TextColor="#999" FontSize="14" Font="Italic" />
       <StackPanel Orientation="Horizontal">
         <ColumnLayout ColumnCount="4" />
         <Each Items="{attachments}">
-          <Panel Background="#333" Padding="3" MinHeight="100">
+          <Panel ux:Name="imgbg" Background="#333" Padding="3" MinHeight="100">
             <Image ux:Name="uploadpreview" StretchMode="UniformToFill" Url="{preview_url}" />
           </Panel>
         </Each>
@@ -21,13 +22,10 @@
       <WhileTrue Value="{errorInSending}">
         <Text Value="Could not send your toot at this time. Sorry!" TextWrapping="Wrap" Color="#fff" Font="Italic" Margin="0,12,0,0" />
       </WhileTrue>
-      <WhileTrue Value="{errorTooManyImages}">
-        <Text Value="You can attach a maximum of 4 images to one post." TextWrapping="Wrap" Color="#fff" Font="Italic" Margin="0,12,0,0" />
-      </WhileTrue>
-      <DockPanel Margin="0,24,0,0">
+      <DockPanel Margin="0,12,0,0">
         <MatodorButton Dock="Left" text="Cancel" Clicked="{emptyScreenAndReturn}" />
-        <MatodorButton Dock="Right" text="Share" Clicked="{doToot}" />
-        <MatodorButton Dock="Right" text="Upload image" Clicked="{selectImage}" />
+        <MatodorButton Dock="Right" text="Share" Clicked="{doToot}" Margin="12,0,0,0" />
+        <MatodorButton Dock="Right" text="Add image ({attachments_length}/4)" Clicked="{selectImage}" />
       </DockPanel>
     </StackPanel>
   </Panel>

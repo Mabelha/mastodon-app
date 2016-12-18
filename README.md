@@ -16,7 +16,7 @@ For Android, you can [visit this link](https://play.google.com/apps/testing/com.
 
 ### What's up with this name? ###
 
-Every mastodon needs a matodor to tame it. I liked the idea of following the vowels a-o-o. Sounds like a monkey in a fruit basket.
+Every mastodon needs a matador to tame it. I liked the idea of using the vowels (a-o-o) in the word Mastodon. That's why the app is called Matodor, it's not a typo ;-)
 
 ### Build it yourself ###
 

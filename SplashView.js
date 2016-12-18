@@ -5,8 +5,6 @@ nav.menuVisible.value = 'Collapsed';
 var Observable = require("FuseJS/Observable");
 var loginButtonVisible = Observable( 'Collapsed' );
 
-data.loadFromCache();
-
 if ( data.loadAccessToken() ) {
   setTimeout( function() { router.goto( 'timeline' ); }, 3000 );
 } else {

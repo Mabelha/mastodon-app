@@ -1,3 +1,4 @@
+var EventEmitter    = require("FuseJS/EventEmitter");
 var Observable      = require("FuseJS/Observable");
 var Storage         = require("FuseJS/Storage");
 
@@ -8,17 +9,6 @@ var HtmlEnt         = require( 'assets/js/he/he.js' );
 
 // api credentials
 var api = require( 'assets/js/api' );
-
-var posts = {
-  public        : Observable(),
-  home          : Observable(),
-  notifications : Observable(),
-  user          : Observable(),
-  favourites    : Observable()
-}
-
-// for showing a userprofile on UserProfileView.ux
-var userprofile = Observable();
 
 var loading         = Observable( false );
 var loadingError    = Observable( false );
@@ -32,25 +22,89 @@ function resetErrorMsg() {
 var AccessToken     = Observable( false );
 var at_file         = "access_code.json";
 
-function loadFromCache( _type ) {
-
-  Storage.read( _type + '.' + FILE_DATACACHE )
-    .then(function(contents) {
-      if ( '' != contents ) {
-        var _json = JSON.parse( contents );
-        if ( ( 'object' == typeof _json ) && ( _json.length > 0 ) ) {
-          posts[ _type ] = _json;
-        }
-      }
-    }, function(error) {
-      console.log(error);
-    });
+var currentType     = Observable();
+var posts = {
+  public        : Observable(),
+  home          : Observable(),
+  notifications : Observable(),
+  user          : Observable(),
+  favourites    : Observable()
 }
 
-function saveToCache() {
-  for ( var _type in posts ) {
-    Storage.write( _type + '.' + FILE_DATACACHE, JSON.stringify( posts[ _type ] ) );
+// for showing a userprofile on UserProfileView.ux
+var userprofile = Observable();
+
+function refresh() {
+  if ( '' != currentType.value ) {
+    init( currentType.value, false );
   }
+}
+
+// start to load the (timeline) data
+// function will return false if parameters are incorrect
+// if an error is triggered when the data is fetched,
+// the vars data.msg and data.loadingError are set
+function init( _type, _clear, _id ) {
+
+  if ( true === loading.value ) {
+    console.log( 'already loading data' );
+    return;
+  }
+
+  console.log( 'loading access token' );
+
+  if ( !loadAccessToken() ) {
+    console.log( 'error loading access token' );
+    return false;
+  }
+
+  // clear first or just refresh data.posts
+  if ( arguments.length > 1 && _clear ) {
+
+    console.log( 'refreshing data' );
+
+    posts[ _type ].clear();
+    userprofile.clear();
+
+  } else {
+
+    // set current type
+    currentType.value = _type;
+
+    console.log( 'checking cache' );
+
+    // is this data in cache?
+    // postdata for a specific userid is not stored in cache
+    if ( 'user' != currentType.value ) {
+      var _cache = Storage.readSync( _type + '.' + FILE_DATACACHE );
+      if ( '' != _cache) {
+        var _json = JSON.parse( _cache );
+        console.log( typeof _json );
+        console.log( _json.length );
+        if ( ( 'object' == typeof _json ) && ( _json.length > 0 ) ) {
+          refreshPosts( _json );
+          // posts[ _type ].replaceAll( _json );
+          console.log( 'found data for ' + _type + ' in cache' );
+          // console.log( JSON.stringify( _json ) );
+        }
+      }
+    }
+
+  }
+
+}
+
+function restOfInit() {
+
+  console.log( 'fetch data from server async' );
+
+  // fetch data from API after a small delay to let the page settle
+  if ( arguments.length > 2 ) {
+    setTimeout( function() { loadTimeline( _id ); }, 2000 );
+  } else {
+    setTimeout( function() { loadTimeline(); }, 2000 );
+  }
+
 }
 
 function saveAccessToken( token ) {
@@ -83,23 +137,6 @@ function loadAccessToken( ) {
     return true;
   }
 
-}
-
-function loadPublicTimeline() {
-  loadTimeline( 'public' );
-}
-
-function loadHomeTimeLine() {
-  loadTimeline( 'home' );
-}
-
-function loadNotificationsTimeLine() {
-  loadTimeline( 'notifications' );
-}
-
-function loadUserTimeLine( userid ) {
-  // console.log( JSON.stringify( userid ) );
-  loadTimeline( 'user', userid.value );
 }
 
 function loadUserFavourites() {
@@ -137,66 +174,113 @@ function loadUserProfile( _userid ) {
 
 }
 
-function refreshAllTimelines() {
-  for ( var i in posts ) {
-    loadTimeline( i );
-  }
-}
-
-function loadTimeline( _type, _id ) {
+function loadTimeline( _id ) {
 
   loading.value = true;
-  loadingError.value = false;
-  msg.value = '';
 
-  if ( 'user' != _type ) {
-    loadFromCache( _type );
-  } else {
-    if ( 1 == arguments.length ) {
-      return false;
-    }
+  var endpoint = '';
+  switch ( currentType.value ) {
+    case 'home':
+      endpoint = 'api/v1/timelines/home';
+      break;
+    case 'notifications':
+      endpoint = 'api/v1/notifications';
+      break;
+    case 'user':
+      endpoint = 'api/v1/accounts/' + _id + '/statuses';
+      break;
+    case 'public':
+    default:
+      endpoint = 'api/v1/timelines/public';
+      break;
   }
 
-  if ( !loadAccessToken() ) {
-    console.log( 'error loading access token' );
+  console.log( 'calling API endpoint ' + endpoint + ' with access token ' + AccessToken.value );
+
+  fetch( 'https://mastodon.social/' + endpoint, {
+    method: 'GET',
+    headers: {
+      'Content-type': 'application/json',
+      'Authorization': 'Bearer ' + AccessToken.value
+    }
+  })
+  .then( function( resp ) {
+    console.log( 'LD3: ' + resp.status );
+    if ( 200 == resp.status ) {
+      // console.log( 'LD3A' );
+      return resp.json();
+    } else {
+      console.log( 'data.loadPosts returned status ' + resp.status );
+      loading.value = false;
+    }
+  })
+  .then( function( json ) {
+    console.log( 'LD4' );
+    console.log( 'writing fetch result to cache' );
+    Storage.write( currentType.value + '.' + FILE_DATACACHE, JSON.stringify( json ) );
+    refreshPosts( json );
     loading.value = false;
-    return false;
-  }
+  })
+  .catch( function( err ) {
+    console.log( 'data.loadPosts caused error' );
+    loading.value = false;
+  });
 
-  // console.log( 'loading public timeline with code ' + AccessToken.value );
+}
 
-  api.loadPosts( _type, AccessToken.value, _id ).then(
+// change properties of post with id _postid
+// set the properties in _data ( e.g. { reblogged: true } )
+function refreshPost( _postid, _data ) {
 
-    function( data ) {
+  posts[ currentType.value ].forEach( function( item, key ) {
+    if ( 'notifications' == currentType.value ) {
 
-      posts[ _type ].refreshAll(
-        data,
-        // compare ID
-        function( oldItem, newItem ) {
-          return oldItem.id == newItem.id;
-        },
-        // Update text
-        function( oldItem, newItem ) {
-            // oldItem.text.value = newItem.text;
-        },
-        // Map to object with an observable version of text
-        function( newItem ) {
-          return ( 'notifications' == _type ) ? new MastodonNotification( newItem ) : new MastodonPost( newItem );
+      if ( _postid == item.status.id ) {
+        for( var i in _data ) {
+          console.log( 'updating ' + i + ' for notification post with id ' + _postid );
+          posts[ currentType.value ][ key ].status[ i ] = _data[ i ];
         }
-      );
+      }
 
-      saveToCache();
-      loading.value = false;
+    } else {
 
-    },
+      if ( _postid == item.id ) {
+        for( var i in _data ) {
+          console.log( 'updating ' + i + ' for post with id ' + _postid );
+          posts[ currentType.value ][ key ][ i ] = _data[ i ];
+        }
+      }
 
-    function( error ) {
-      loading.value = false;
-      loadingError.value = true;
-      msg.value = 'New posts could not be loaded.';
     }
+  });
 
+}
+
+function refreshPosts( data ) {
+
+  console.log( 'starting refresh of all posts' );
+
+  posts[ currentType.value ].refreshAll(
+    data,
+    // compare ID
+    function( oldItem, newItem ) {
+      return oldItem.id == newItem.id;
+    },
+    // Update text
+    function( oldItem, newItem ) {
+        // oldItem.user.value = newItem.user;
+        // oldItem.favourites.value = newItem.favourites;
+    },
+    // Map to object with an observable version of text
+    function( newItem ) {
+      console.log( 'updating item >>>>' );
+      console.log( JSON.stringify( newItem ) );
+      console.log( '<<<<<<<<<<<<<<<<<<' );
+      return ( 'notifications' == currentType.value ) ? new MastodonNotification( newItem ) : new MastodonPost( newItem );
+    }
   );
+
+  console.log( 'finished refreshing data.posts' );
 
 }
 
@@ -204,13 +288,11 @@ function doImageUpload( b64 ) {
 
   try {
     var xhr = new XMLHttpRequest();
-    // xhr.addEventListener("progress",function(e){ uploadProgress(e); }, false);
     xhr.addEventListener("load",function(e){ uploadDone(e); }, false);
     xhr.addEventListener("error",function(e){ uploadError(e); }, false);
     xhr.open("POST","https://mastodon.social/api/v1/media",true);
     xhr.setRequestHeader("Content-Type", "application/json");
     xhr.setRequestHeader("Authorization", "Bearer " + AccessToken.value );
-    // var parametros = {'image':image,'id': ElCliente.value.IDCliente};
     xhr.send( b64 );
   } catch( err ) {
     console.log( JSON.stringify( err ) );
@@ -218,14 +300,13 @@ function doImageUpload( b64 ) {
 }
 
 function uploadDone(e) {
-  console.log( "result: " + JSON.stringify( e.target ) );
   if ( e.target.status === 200) {
     console.log("successfull return");
   }
 }
 
 function uploadError( e ) {
-    console.log("error: " + JSON.stringify( e.target ) );
+  console.log("error: " + JSON.stringify( e.target ) );
 }
 
 function sendImage( _imgObj ) {
@@ -278,104 +359,95 @@ function sendPost( _txt, _inreplyto, _media ) {
 
 }
 
-function rePost( _postid, _currentstatus ) {
+function rePost( _postid, _unRepost ) {
 
-  api.rePost( _postid, AccessToken.value, _currentstatus ).then(
-
-    function( result ) {
-
-      if ( result.err ) {
-        // TODO show this has gone wrong
-      } else {
-        updateAllOccurences( result.post, 'reblogged', !_currentstatus );
-      }
-
-    }
-
-  ).catch(
-
-    function( error ) {
-      console.log( JSON.parse( error ) );
-    }
-
-  );
-
-}
-
-function favouritePost( _postid, _currentstatus ) {
-
-  api.favouritePost( _postid, AccessToken.value, _currentstatus ).then(
-
-    function( result ) {
-
-      if ( result.err ) {
-        // TODO show this has gone wrong
-      } else {
-        updateAllOccurences( result.post, 'favourited', !_currentstatus );
-      }
-
-    }
-  ).catch(
-
-    function( error ) {
-      console.log( 'favourited returned in catch()' );
-      console.log( JSON.stringify( error ) );
-    }
-
-  );
-
-
-}
-
-function updateAllOccurences( _post, _parameter, _value ) {
-
-  for ( var i in posts ) {
-
-    // todo: both solutions below are not perfect and both do not update the screen (which is the only purpose of this function)
-
-    // posts[ i ].refreshAll(
-    //   [ _post ],
-    //   // compare on ID
-    //   function(oldItem, newItem){
-    //     return oldItem.id == newItem.id;
-    //   },
-    //   // update value
-    //   function(oldItem, newItem){
-    //     oldItem[ _parameter ] = _value;
-    //   }
-    //
-    // );
-
-    // // TODO two for loops, really?
-    // posts[ i ].forEach(
-    //   function( p ) {
-    //     // notification?
-    //     if ( 'boolean' == typeof p.isMention ) {
-    //
-    //       // wait! if this is a follow notification, we have no data about a post
-    //       if ( true !== p.isFollow ) {
-    //         if ( _postid == p.status.id ) {
-    //           console.log( ' >>> notification! setting ' + _parameter + ' for post ' + _postid + ' to ' + _value.toString() );
-    //           p.status[ _parameter ] = _value;
-    //         }
-    //       }
-    //
-    //     } else {
-    //       if ( _postid == p.id ) {
-    //         console.log( ' >>> regular post! setting ' + _parameter + ' for post ' + _postid + ' to ' + _value.toString() );
-    //         p[ _parameter ] = _value;
-    //       }
-    //     }
-    //   }
-    // );
-
+  if ( arguments.length < 2 ) {
+    var _unRepost = false;
   }
+
+  var _apiAction = ( _unRepost ) ? 'unreblog' : 'reblog';
+
+  // create promise
+  var rpEmitter = new EventEmitter( 'rePostEnded' );
+
+  fetch( 'https://mastodon.social/api/v1/statuses/' + _postid + '/' + _apiAction, {
+    method: 'POST',
+    headers: {
+      'Content-type': 'application/json',
+      'Authorization': 'Bearer ' + AccessToken.value
+    }
+  })
+  .then( function( resp ) {
+    console.log( 'repost http status ' + resp.status );
+    if ( 200 == resp.status ) {
+      return resp.json();
+    } else {
+      rpEmitter.emit( 'rePostEnded', { err: true } );
+    }
+  })
+  .then( function( json ) {
+    refreshPost( _postid, { reblogged: !_unRepost } );
+    rpEmitter.emit( 'rePostEnded', { err: false, post: json } );
+  })
+  .catch( function( err ) {
+    console.log( 'repost error in call' );
+    rpEmitter.emit( 'rePostEnded', { err: true } );
+  });
+
+  return rpEmitter.promiseOf( 'rePostEnded' );
+
+}
+
+function favouritePost( _postid, unFavourite ) {
+
+  console.log( 'start' );
+
+  if ( arguments.length < 2 ) {
+    var unFavourite = false;
+  }
+
+  var _apiAction = ( unFavourite ) ? 'unfavourite' : 'favourite';
+
+  // console.log( 'favourite: ' + _postid + '/' + _apiAction );
+
+  // create promise
+  var favEmitter = new EventEmitter( 'favouritePostEnded' );
+
+  fetch( 'https://mastodon.social/api/v1/statuses/' + _postid + '/' + _apiAction, {
+      method: 'POST',
+      headers: {
+          'Content-type': 'application/json',
+          'Authorization': 'Bearer ' + AccessToken.value
+      }
+  })
+  .then( function( resp ) {
+      // console.log( 'LD3' );
+      if ( 200 == resp.status ) {
+          // console.log( 'LD3A' );
+          return resp.json();
+      } else {
+          // console.log( 'LD3B' );
+          favEmitter.emit( 'favouritePostEnded', { err: true } );
+      }
+  })
+  .then( function( json ) {
+    // console.log( 'LD4' );
+    favEmitter.emit( 'favouritePostEnded', { err: false, post: json } );
+  })
+  .catch( function( err ) {
+    // console.log( 'LD5' );
+    favEmitter.emit( 'favouritePostEnded', { err: true } );
+  });
+
+  return favEmitter.promiseOf( 'favouritePostEnded' );
 
 }
 
 function MastodonNotification( info ) {
 
   // console.log( JSON.stringify( info ) );
+
+  this.isNotification     = true;
 
   this.isReblog           = ( 'reblog' == info.type );
   this.isMention          = ( 'mention' == info.type );
@@ -388,21 +460,26 @@ function MastodonNotification( info ) {
 
   if ( this.isFollow ) {
 
-    this.account.note       = this.account.note.replace( /<[^>]+>/ig, '' );
+    this.account.note       = HtmlEnt.decode( this.account.note.replace( /<[^>]+>/ig, '' ) );
 
   } else {
 
     this.content            = preparePostContent( this.status );
+    this.contenttxt         = this.status.content;
     this.timesince          = timeSince( this.status.created_at );
-    this.media_attachments  = this.status.media_attachments.slice(0, 1);
+    this.media_attachments  = this.status.media_attachments.slice( 0, 1 );
 
   }
+
+  return this;
 
 }
 
 function MastodonPost( info ) {
 
-  this.isReblog     = ( null !== info.reblog );
+  this.isNotification     = false;
+
+  this.isReblog           = ( null !== info.reblog );
 
   if ( this.isReblog ) {
     this.reblogname =  info.account.display_name;
@@ -414,10 +491,16 @@ function MastodonPost( info ) {
   }
 
   this.content            = preparePostContent( info );
+  this.contenttxt         = info.content;
   this.timesince          = timeSince( this.created_at );
 
   // TODO show all attachments
   this.media_attachments  = this.media_attachments.slice(0, 1);
+
+  // avatar a gif? animated or not, FuseTools cannot handle it
+  this.isGifAvatar = ( 'gif' == this.account.avatar.slice( -3 ).toLowerCase() );
+
+  return this;
 
 }
 
@@ -428,9 +511,11 @@ function preparePostContent( postdata ) {
   // @<a href=\"http://sn.gunmonkeynet.net/index.php/user/1\">nybill</a> eek, well glad it was finally noticed.
 
   // replace HTML codes like &amp; and &gt;
+  // console.log( 'replace html entities' );
   var _content = HtmlEnt.decode( postdata.content );
 
   // temporary replace urls to prevent splitting on spaces in linktext
+  // console.log( 'replace urls with temp indicator' );
   var regex = /<[aA].*?\s+href=["']([^"']*)["'][^>]*>(?:<.*?>)*(.*?)(?:<.*?>)?<\/[aA]>/igm ;
   var _uris = _content.match( regex );
   if ( _uris && ( _uris.length > 0 ) ) {
@@ -439,6 +524,12 @@ function preparePostContent( postdata ) {
       _content = _content.replace( _uris[ i ], '[[[[' + i );
     }
   }
+
+  // whould like some empty lines to survive in the content
+  // first: remove last </p> as this need not be replaced
+  // console.log( 'replace last </p> with temp indicator' );
+  _content = _content.replace(new RegExp('<\/p>$'), '');
+  _content = _content.replace( "</p>", " ]]]] " );
 
   // now remove al HTML tags
   _content = _content.replace( /<[^>]+>/ig, '' );
@@ -452,11 +543,19 @@ function preparePostContent( postdata ) {
   var _words = _content.split( /\s/g );
 
   for ( var i in _words ) {
-    if ( -1 === _words[ i ].indexOf( '[[[[' ) ) {
+
+    // console.log( _words[ i ] );
+
+    // new line?
+    if ( _words[ i ].indexOf( ']]]]' ) > -1 ) {
+
+      result.add( { word: '', clear: true } );
+
+    } else if ( -1 === _words[ i ].indexOf( '[[[[' ) ) {
 
       // this is not a link, add it as a word
-      // click event in Part.PostCard can send it to the post detail screen
-      result.add( { word: _words[ i ], makeBold: false } );
+      // click event in Part.PostCard can send it to the post context screen
+      result.add( { word: _words[ i ] } );
 
     } else {
 
@@ -510,66 +609,6 @@ function preparePostContent( postdata ) {
 
 }
 
-// function preparePostContentOld( postdata ) {
-//
-//   var _placeholder = 'PLCHLDRAEOE';
-//
-//   // replace HTML codes like &amp; and &gt;
-//   var _content = HtmlEnt.decode( postdata.content );
-//
-//   // temporary replace urls to prevent splitting on spaces in linktext
-//   var regex = /<[aA].*?\s+href=["']([^"']*)["'][^>]*>(?:<.*?>)*(.*?)(?:<.*?>)?<\/[aA]>/igm ;
-//   var _uris = _content.match( regex );
-//   if ( _uris && ( _uris.length > 0 ) ) {
-//     for ( var i in _uris ) {
-//       _content = _content.replace( _uris[ i ], _placeholder + i );
-//     }
-//   }
-//
-//   // now remove al HTML tags
-//   _content = _content.replace( /<[^>]+>/ig, '' );
-//
-//   var result = Observable();
-//
-//   // _words = _content.split( /\b/g );
-//   _words = _content.split( /\s/g );
-//   for ( var i in _words ) {
-//
-//     // So take a look at me now Well there's just an empty space
-//     if ( ' ' == _words[ i ] ) {
-//       // TODO adjust regex to not report spaces
-//     } else if ( 0 == _words[ i ].indexOf( _placeholder ) ) {
-//       // we've got a link
-//       var _linkId = Number.parseInt( _words[ i ].replace( _placeholder, '' ) );
-//       var _linkTxt = _uris[ _linkId ].replace( /<[^>]+>/ig, '' );
-//       console.log( _linkTxt );
-//       if ( postdata.mentions.some( function (obj) { return '@' + obj.acct === _linkTxt; }) ) {
-//         result.add( { word: _linkTxt, makeBold: true, username: _linkTxt } );
-//       } else if ( postdata.media_attachments.some( function (obj) { return ( _linkTxt.indexOf( obj.id ) > -1 ); }) ) {
-//         // do not show the urls for media_attachments in the content
-//       }
-//     } else {
-//       result.add( { word: _words[ i ], makeBold: false } );
-//     }
-//     //
-//     //
-//     //
-//     //
-//     // if ( postdata.media_attachments.some( function (obj) { return ( _words[ i ].indexOf( obj.id ) > -1 ); }) ) {
-//     //   // do not show the urls for media_attachments in the content
-//     // } else if ( postdata.mentions.some( function (obj) { return '@' + obj.acct === _words[ i ]; }) ) {
-//     //   result.add( { word: _words[ i ], mention: true, username: _words[ i ], tag: false } );
-//     // } else if ( postdata.tags.some( function (obj) { return '#' + obj.name === _words[ i ]; }) ) {
-//     //   result.add( { word: _words[ i ], mention: false, tag: true, tagname: _words[ i ] } );
-//     // } else {
-//     //   result.add( { word: _words[ i ], mention: false, tag: false } );
-//     // }
-//
-//   }
-//
-//   return result;
-// }
-
 function timeSince(date) {
 
     var seconds = Math.floor( ( new Date() - new Date( date ) ) / 1000 );
@@ -593,20 +632,15 @@ function timeSince(date) {
 }
 
 module.exports = {
-  loadFromCache: loadFromCache,
   loadAccessToken: loadAccessToken,
   saveAccessToken: saveAccessToken,
-  loadPublicTimeline: loadPublicTimeline,
-  loadHomeTimeLine: loadHomeTimeLine,
-  loadNotificationsTimeLine: loadNotificationsTimeLine,
-  loadUserTimeLine: loadUserTimeLine,
-  loadUserProfile: loadUserProfile,
-  loadUserFavourites: loadUserFavourites,
-  refreshAllTimelines: refreshAllTimelines,
+  init: init,
+  refresh: refresh,
   sendPost: sendPost,
   sendImage: sendImage,
   rePost: rePost,
   favouritePost: favouritePost,
+  loadUserProfile: loadUserProfile,
   posts: posts,
   loading: loading,
   loadingError: loadingError,

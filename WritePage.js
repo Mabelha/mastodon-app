@@ -1,12 +1,11 @@
-var nav = require("assets/js/navigation");
+var nav = require( "assets/js/navigation" );
 nav.menuVisible.value = 'Visible';
 
-var data = require( 'assets/js/data' );
+var data = require( "assets/js/data" );
 
 var Observable = require("FuseJS/Observable");
 
 var errorInSending = Observable( false );
-var errorTooManyImages = Observable( false );
 
 // get arguments passed by router
 var inReplyToPostId = this.Parameter.map( function( param ) {
@@ -26,11 +25,20 @@ var txtToToot = this.Parameter.map( function( param ) {
 
   for ( var i in param.mentions ) {
     if ( param.firstup != param.mentions[ i ].acct ) {
-      _prefillPost += ' @' + param.mentions[ i ].acct + ' ';
+      _prefillPost += '@' + param.mentions[ i ].acct + ' ';
     }
   }
 
   return _prefillPost;
+});
+
+// stats
+var attachments_length = Observable( function() {
+  return media_attachments.length;
+});
+
+var txtLength = Observable( function() {
+  return ( txtToToot.value ) ? txtToToot.value.length : 0;
 });
 
 var cameraRoll = require("FuseJS/CameraRoll");
@@ -70,22 +78,16 @@ function doToot() {
 
 function emptyScreenAndReturn() {
 
-  var _goBack = ( inReplyToPostId > 0 );
   txtToToot.value = '';
   inReplyToPostId.value = 0;
   media_attachments.clear();
-  if ( _goBack ) {
-    router.goBack();
-  } else {
-    router.push( "timeline" );
-  }
+  router.goBack();
 
 }
 
 function selectImage() {
 
   if ( media_attachments.length > 3 ) {
-    errorTooManyImages.value = true;
     return false;
   }
 
@@ -115,10 +117,11 @@ function selectImage() {
 module.exports = {
   inReplyToPostId: inReplyToPostId,
   txtToToot: txtToToot,
+  txtLength: txtLength,
   attachments: media_attachments,
+  attachments_length: attachments_length,
   doToot: doToot,
   emptyScreenAndReturn: emptyScreenAndReturn,
   errorInSending: errorInSending,
-  errorTooManyImages: errorTooManyImages,
   selectImage: selectImage
 }

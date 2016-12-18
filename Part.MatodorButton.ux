@@ -1,7 +1,9 @@
-<Button ux:Class="MatodorButton" Margin="8,0,0,0">
+<Panel ux:Class="MatodorButton" ux:Name="button" HitTestMode="LocalBounds">
   <string ux:Property="text" />
-  <Panel HitTestMode="LocalBounds">
-    <Text Value="{Property this.text}" Color="#fff" Alignment="Center" TextAlignment="Center" Margin="12" />
-    <Rectangle CornerRadius="4" Layer="Background" Color="#282b37" />
-  </Panel>
-</Button>
+
+  <Text Value="{Property button.text}" TextColor="#fff" Alignment="Center" TextAlignment="Center" Margin="12,6" />
+  <Rectangle ux:Name="buttonbg" Layer="Background" Color="#2b90d9" CornerRadius="4" />
+  <WhilePressed>
+    <Change buttonbg.Color="#555" />
+  </WhilePressed>
+</Panel>

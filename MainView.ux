@@ -68,6 +68,7 @@
       <TimelinePage ux:Template="timeline" router="router" />
       <NotificationsPage ux:Template="notifications" router="router" />
       <UserProfilePage ux:Template="userprofile" router="router" />
+      <PostContextPage ux:Template="postcontext" router="router" />
       <PublicTimelinePage ux:Template="publictimeline" router="router" />
     </Navigator>
 

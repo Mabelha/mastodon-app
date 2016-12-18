@@ -3,14 +3,10 @@ nav.menuVisible.value = 'Visible';
 
 var Observable = require("FuseJS/Observable");
 
-var userid = this.Parameter.map( function( param ) {
-  return param.userid;
-});
-
 var data = require( 'assets/js/data' );
-userid.addSubscriber( function() {
-  data.loadUserProfile( userid );
-  data.loadUserTimeLine( userid );
+this.Parameter.onValueChanged( module, function( param ) {
+  data.init( 'user', param.userid );
+  data.loadUserProfile( param.userid );
 })
 
 function goBack() {
