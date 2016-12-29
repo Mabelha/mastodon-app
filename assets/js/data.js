@@ -1,5 +1,5 @@
-var EventEmitter    = require("FuseJS/EventEmitter");
 var Observable      = require("FuseJS/Observable");
+var EventEmitter    = require("FuseJS/EventEmitter");
 var Storage         = require("FuseJS/Storage");
 
 var FILE_DATACACHE  = 'data.cache.json';
@@ -11,40 +11,43 @@ var HtmlEnt         = require( 'assets/js/he/he.js' );
 var api = require( 'assets/js/api' );
 
 var loading         = Observable( false );
-var loadingError    = Observable( false );
-var msg             = Observable( '' );
-function resetErrorMsg() {
-  console.log( 'resetting error data' );
-  loadingError.value = false;
-  msg.value = '';
-}
+var loadErrorMsg    = Observable( '' );
 
-var AccessToken     = Observable( false );
-var at_file         = "access_code.json";
+var AccessToken     = '';
+var at_file         = "at.json";
 
-var currentType     = Observable();
+var currentType     = Observable( '' );
 var posts = {
   public        : Observable(),
   home          : Observable(),
   notifications : Observable(),
   user          : Observable(),
   favourites    : Observable()
-}
+};
 
 // for showing a userprofile on UserProfileView.ux
 var userprofile = Observable();
 
-function refresh() {
-  if ( '' != currentType.value ) {
-    init( currentType.value, false );
+function clearPosts() {
+
+  for ( var i in posts ) {
+    posts[ i ].clear();
   }
+
+  userprofile.clear();
+
+}
+
+function resetErrorMsg() {
+  console.log( 'resetting error data' );
+  loadErrorMsg.value = '';
 }
 
 // start to load the (timeline) data
 // function will return false if parameters are incorrect
 // if an error is triggered when the data is fetched,
-// the vars data.msg and data.loadingError are set
-function init( _type, _clear, _id ) {
+// the var data.loadErrorMsg is set
+function init( _type, _id ) {
 
   if ( true === loading.value ) {
     console.log( 'already loading data' );
@@ -58,38 +61,22 @@ function init( _type, _clear, _id ) {
     return false;
   }
 
-  // clear first or just refresh data.posts
-  if ( arguments.length > 1 && _clear ) {
+  // set current type
+  currentType.value = _type;
 
-    console.log( 'refreshing data' );
+  console.log( 'checking cache' );
 
-    posts[ _type ].clear();
-    userprofile.clear();
-
-  } else {
-
-    // set current type
-    currentType.value = _type;
-
-    console.log( 'checking cache' );
-
-    // is this data in cache?
-    // postdata for a specific userid is not stored in cache
-    if ( 'user' != currentType.value ) {
-      var _cache = Storage.readSync( _type + '.' + FILE_DATACACHE );
-      if ( '' != _cache) {
-        var _json = JSON.parse( _cache );
-        console.log( typeof _json );
-        console.log( _json.length );
-        if ( ( 'object' == typeof _json ) && ( _json.length > 0 ) ) {
-          refreshPosts( _json );
-          // posts[ _type ].replaceAll( _json );
-          console.log( 'found data for ' + _type + ' in cache' );
-          // console.log( JSON.stringify( _json ) );
-        }
+  // is this data in cache?
+  // postdata for a specific userid is not stored in cache
+  if ( 'user' != currentType.value ) {
+    var _cache = Storage.readSync( _type + '.' + FILE_DATACACHE );
+    if ( '' != _cache) {
+      var _json = JSON.parse( _cache );
+      if ( ( 'object' == typeof _json ) && ( _json.length > 0 ) ) {
+        console.log( 'found data for ' + _type + ' in cache' );
+        refreshPosts( _json );
       }
     }
-
   }
 
 }
@@ -107,14 +94,20 @@ function restOfInit() {
 
 }
 
+function refreshTimeline() {
+  if ( '' != currentType.value ) {
+    loadTimeline( currentType.value );
+  }
+}
+
 function saveAccessToken( token ) {
-  AccessToken.value = token.access_token;
+  AccessToken = token.access_token;
   return Storage.writeSync( at_file, JSON.stringify( token ) );
 }
 
 function loadAccessToken( ) {
 
-  if ( false != AccessToken.value ) {
+  if ( false != AccessToken ) {
     return true;
   }
 
@@ -133,7 +126,7 @@ function loadAccessToken( ) {
     // for ( var i in token ) {
     //   console.log( i + ': ' + token[i] );
     // }
-    AccessToken.value = token.access_token;
+    AccessToken = token.access_token;
     return true;
   }
 
@@ -145,9 +138,9 @@ function loadUserFavourites() {
 
 function loadUserProfile( _userid ) {
 
-  // console.log( 'getting user profile for user id ' + _userid.value );
+  // console.log( 'getting user profile for user id ' + _userid );
 
-  api.loadUserProfile( _userid.value, AccessToken.value ).then(
+  api.loadUserProfile( _userid, AccessToken ).then(
 
     function( result ) {
 
@@ -156,10 +149,9 @@ function loadUserProfile( _userid ) {
         console.log( 'error in loading user profile: ' + JSON.stringify( result ) );
       } else {
         // console.log( 'loaded user profile: ' + JSON.stringify( result ) );
-        var _userprofile = result.userprofile;
-        _userprofile.note = HtmlEnt.decode( _userprofile.note );
-        _userprofile.note = _userprofile.note.replace( /<[^>]+>/ig, '' );
-        userprofile.value = _userprofile;
+        userprofile = result.userprofile;
+        userprofile.note = HtmlEnt.decode( userprofile.note );
+        userprofile.note = userprofile.note.replace( /<[^>]+>/ig, '' );
       }
 
     }
@@ -195,13 +187,13 @@ function loadTimeline( _id ) {
       break;
   }
 
-  console.log( 'calling API endpoint ' + endpoint + ' with access token ' + AccessToken.value );
+  console.log( 'calling API endpoint ' + endpoint + ' with access token ' + AccessToken );
 
   fetch( 'https://mastodon.social/' + endpoint, {
     method: 'GET',
     headers: {
       'Content-type': 'application/json',
-      'Authorization': 'Bearer ' + AccessToken.value
+      'Authorization': 'Bearer ' + AccessToken
     }
   })
   .then( function( resp ) {
@@ -228,59 +220,27 @@ function loadTimeline( _id ) {
 
 }
 
-// change properties of post with id _postid
-// set the properties in _data ( e.g. { reblogged: true } )
-function refreshPost( _postid, _data ) {
-
-  posts[ currentType.value ].forEach( function( item, key ) {
-    if ( 'notifications' == currentType.value ) {
-
-      if ( _postid == item.status.id ) {
-        for( var i in _data ) {
-          console.log( 'updating ' + i + ' for notification post with id ' + _postid );
-          posts[ currentType.value ][ key ].status[ i ] = _data[ i ];
-        }
-      }
-
-    } else {
-
-      if ( _postid == item.id ) {
-        for( var i in _data ) {
-          console.log( 'updating ' + i + ' for post with id ' + _postid );
-          posts[ currentType.value ][ key ][ i ] = _data[ i ];
-        }
-      }
-
-    }
-  });
-
-}
-
 function refreshPosts( data ) {
 
-  console.log( 'starting refresh of all posts' );
+  console.log( 'resfresh data.posts.' + currentType.value );
 
-  posts[ currentType.value ].refreshAll(
-    data,
-    // compare ID
-    function( oldItem, newItem ) {
-      return oldItem.id == newItem.id;
-    },
-    // Update text
-    function( oldItem, newItem ) {
-        // oldItem.user.value = newItem.user;
-        // oldItem.favourites.value = newItem.favourites;
-    },
-    // Map to object with an observable version of text
-    function( newItem ) {
-      console.log( 'updating item >>>>' );
-      console.log( JSON.stringify( newItem ) );
-      console.log( '<<<<<<<<<<<<<<<<<<' );
-      return ( 'notifications' == currentType.value ) ? new MastodonNotification( newItem ) : new MastodonPost( newItem );
-    }
+   posts[ currentType.value ].refreshAll(
+     data,
+     // same item?
+     function( _old, _new ) {
+       return _old.id == _new.id;
+     },
+     // update if found
+     function( _old, _new ) {
+       _old = MastodonPost( _new );
+     },
+     // not found, add new one
+     function( _new ) {
+       return MastodonPost( _new );
+     }
   );
 
-  console.log( 'finished refreshing data.posts' );
+  console.log( 'finished refreshing data.posts; ' + posts[ currentType.value ].length + ' elements now.' );
 
 }
 
@@ -292,7 +252,7 @@ function doImageUpload( b64 ) {
     xhr.addEventListener("error",function(e){ uploadError(e); }, false);
     xhr.open("POST","https://mastodon.social/api/v1/media",true);
     xhr.setRequestHeader("Content-Type", "application/json");
-    xhr.setRequestHeader("Authorization", "Bearer " + AccessToken.value );
+    xhr.setRequestHeader("Authorization", "Bearer " + AccessToken );
     xhr.send( b64 );
   } catch( err ) {
     console.log( JSON.stringify( err ) );
@@ -315,7 +275,7 @@ function sendImage( _imgObj ) {
   return Uploader.send(
     _imgObj.path,
     'https://mastodon.social/api/v1/media',
-    AccessToken.value
+    AccessToken
   );
 
 }
@@ -337,7 +297,7 @@ function sendPost( _txt, _inreplyto, _media ) {
     var _resolve = resolve;
     var _reject = reject;
 
-    api.sendPost( _txt, _inreplyto, _media, AccessToken.value ).then(
+    api.sendPost( _txt, _inreplyto, _media, AccessToken ).then(
 
       function( data ) {
 
@@ -374,7 +334,7 @@ function rePost( _postid, _unRepost ) {
     method: 'POST',
     headers: {
       'Content-type': 'application/json',
-      'Authorization': 'Bearer ' + AccessToken.value
+      'Authorization': 'Bearer ' + AccessToken
     }
   })
   .then( function( resp ) {
@@ -386,7 +346,7 @@ function rePost( _postid, _unRepost ) {
     }
   })
   .then( function( json ) {
-    refreshPost( _postid, { reblogged: !_unRepost } );
+    refreshPosts( json );
     rpEmitter.emit( 'rePostEnded', { err: false, post: json } );
   })
   .catch( function( err ) {
@@ -417,7 +377,7 @@ function favouritePost( _postid, unFavourite ) {
       method: 'POST',
       headers: {
           'Content-type': 'application/json',
-          'Authorization': 'Bearer ' + AccessToken.value
+          'Authorization': 'Bearer ' + AccessToken
       }
   })
   .then( function( resp ) {
@@ -443,65 +403,41 @@ function favouritePost( _postid, unFavourite ) {
 
 }
 
-function MastodonNotification( info ) {
-
-  // console.log( JSON.stringify( info ) );
-
-  this.isNotification     = true;
-
-  this.isReblog           = ( 'reblog' == info.type );
-  this.isMention          = ( 'mention' == info.type );
-  this.isFavourite        = ( 'favourite' == info.type );
-  this.isFollow           = ( 'follow' == info.type );
-
-  for (var i in info ) {
-    this[ i ] = info[ i ];
-  }
-
-  if ( this.isFollow ) {
-
-    this.account.note       = HtmlEnt.decode( this.account.note.replace( /<[^>]+>/ig, '' ) );
-
-  } else {
-
-    this.content            = preparePostContent( this.status );
-    this.contenttxt         = this.status.content;
-    this.timesince          = timeSince( this.status.created_at );
-    this.media_attachments  = this.status.media_attachments.slice( 0, 1 );
-
-  }
-
-  return this;
-
-}
-
 function MastodonPost( info ) {
 
-  this.isNotification     = false;
+  var _this = {};
 
-  this.isReblog           = ( null !== info.reblog );
+  _this.isNotification    = ( 'notifications' == currentType.value );
+  _this.isReblog          = ( 'reblog' == info.type ) || ( null !== info.reblog );
+  _this.isMention         = ( 'mention' == info.type );
+  _this.isFavourite       = ( 'favourite' == info.type );
+  _this.isFollow          = ( 'follow' == info.type );
 
-  if ( this.isReblog ) {
-    this.reblogname =  info.account.display_name;
-    info            = info.reblog;
+  console.log( JSON.stringify( info ) );
+
+  if ( 'notifications' == currentType.value ) {
+    info = info.status;
+  } else if ( ( 'reblog' == info.type ) || ( null !== info.reblog ) ) {
+    _this.reblogname      = info.account.display_name;
+    info = info.reblog;
   }
 
   for (var i in info ) {
-    this[ i ] = info[ i ];
+    _this[ i ]            = info[ i ];
   }
 
-  this.content            = preparePostContent( info );
-  this.contenttxt         = info.content;
-  this.timesince          = timeSince( this.created_at );
+  if ( !_this.isFollow ) {
+    _this.preparedContent   = preparePostContent( info );
+    _this.media_attachments = info.media_attachments;
+    _this.timesince         = timeSince( info.created_at );
 
-  // TODO show all attachments
-  this.media_attachments  = this.media_attachments.slice(0, 1);
+    // avatar a gif? animated or not, FuseTools cannot handle it
+    _this.isGifAvatar       = ( 'gif' == info.account.avatar.slice( -3 ).toLowerCase() );
+  }
 
-  // avatar a gif? animated or not, FuseTools cannot handle it
-  this.isGifAvatar = ( 'gif' == this.account.avatar.slice( -3 ).toLowerCase() );
+  // console.log( JSON.stringify( _this ) );
 
-  return this;
-
+  return _this;
 }
 
 function preparePostContent( postdata ) {
@@ -512,7 +448,9 @@ function preparePostContent( postdata ) {
 
   // replace HTML codes like &amp; and &gt;
   // console.log( 'replace html entities' );
-  var _content = HtmlEnt.decode( postdata.content );
+  var _content = ( postdata.content ) ? HtmlEnt.decode( postdata.content ) : '';
+
+  return _content.replace( /<[^>]+>/ig, '' );
 
   // temporary replace urls to prevent splitting on spaces in linktext
   // console.log( 'replace urls with temp indicator' );
@@ -538,7 +476,7 @@ function preparePostContent( postdata ) {
   // console.log( _content );
   // console.log( ' <<<<<<<<<<<<<<<' );
 
-  var result = Observable();
+  var result = [];
 
   var _words = _content.split( /\s/g );
 
@@ -549,13 +487,13 @@ function preparePostContent( postdata ) {
     // new line?
     if ( _words[ i ].indexOf( ']]]]' ) > -1 ) {
 
-      result.add( { word: '', clear: true } );
+      result.push( { word: '', clear: true } );
 
     } else if ( -1 === _words[ i ].indexOf( '[[[[' ) ) {
 
       // this is not a link, add it as a word
       // click event in Part.PostCard can send it to the post context screen
-      result.add( { word: _words[ i ] } );
+      result.push( { word: _words[ i ] } );
 
     } else {
 
@@ -572,7 +510,7 @@ function preparePostContent( postdata ) {
       // first: mentions
       var _mentioner = postdata.mentions.filter( function (obj) { return ( 0 ==  _linkTxt.indexOf( '@' + obj.acct ) ); } );
       if ( _mentioner.length > 0 ) {
-        result.add( { mention: true, word: _linkTxt, makeBold: true, userid: _mentioner[0].id } );
+        result.push( { mention: true, word: _linkTxt, makeBold: true, userid: _mentioner[0].id } );
       } else {
 
         // not a mention. maybe a hashtag?
@@ -580,7 +518,7 @@ function preparePostContent( postdata ) {
         if ( _tag.length > 0 ) {
 
           // TODO add hashtags
-          result.add( { word: _linkTxt, makeBold: false } );
+          result.push( { word: _linkTxt, makeBold: false } );
 
         } else if ( postdata.media_attachments.some( function (obj) { return ( _linkTxt.indexOf( obj.id ) > -1 ); } ) ) {
 
@@ -589,7 +527,7 @@ function preparePostContent( postdata ) {
         } else if ( ( '@' == _charBeforeLink ) || ( '#' == _charBeforeLink ) ) {
           // mentions on some (older Statusnet installations, says https://community.highlandarrow.com/notice/469679 )
           // are a link with an @ before it. TODO One little thing: no user id from the mentions array
-          result.add( { word: _charBeforeLink + _linkTxt, makeBold: false } );
+          result.push( { word: _charBeforeLink + _linkTxt, makeBold: false } );
 
         } else {
 
@@ -598,7 +536,7 @@ function preparePostContent( postdata ) {
           var _linkstart = _uris[ _linkId ].indexOf( 'href="' ) + 6;
           var _linkend = _uris[ _linkId ].indexOf( '"', _linkstart );
           var _linkUrl = _uris[ _linkId ].substring( _linkstart, _linkend );
-          result.add( { link: true, word: _linkTxt, uri: _linkUrl, makeBold: true } );
+          result.push( { link: true, word: _linkTxt, uri: _linkUrl, makeBold: true } );
 
         }
       }
@@ -635,7 +573,8 @@ module.exports = {
   loadAccessToken: loadAccessToken,
   saveAccessToken: saveAccessToken,
   init: init,
-  refresh: refresh,
+  clear: clearPosts,
+  refreshTimeline: refreshTimeline,
   sendPost: sendPost,
   sendImage: sendImage,
   rePost: rePost,
@@ -643,8 +582,7 @@ module.exports = {
   loadUserProfile: loadUserProfile,
   posts: posts,
   loading: loading,
-  loadingError: loadingError,
-  msg: msg,
+  msg: loadErrorMsg,
   resetErrorMsg: resetErrorMsg,
   userprofile: userprofile
 }

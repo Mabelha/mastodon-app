@@ -1,7 +1,7 @@
 var nav = require("assets/js/navigation");
 nav.menuVisible.value = 'Collapsed';
 
-var data = require("assets/js/data");
+var data = require( 'assets/js/data' );
 
 function goHome() {
   router.goto( 'timeline' );
@@ -19,25 +19,21 @@ function goPublic() {
   router.goto( 'publictimeline' );
 }
 
-function refreshData() {
-  data.refresh();
-}
-
 var Lifecycle = require('FuseJS/Lifecycle');
 Lifecycle.on("enteringInteractive", function() {
   // app activated
-  refreshData();
+  data.refreshTimeline();
 });
 
 module.exports = {
   menuVisible: nav.menuVisible,
+  activePage: nav.activePage,
   goHome: goHome,
   goNotifications: goNotifications,
   goWrite: goWrite,
   goPublic: goPublic,
   loading: data.loading,
   hidePopup: data.resetErrorMsg,
-  loadingError: data.loadingError,
   msg: data.msg,
-  refreshData: refreshData
+  refreshData: data.refreshTimeline
 }

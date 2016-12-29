@@ -1,7 +1,7 @@
 var nav = require( "assets/js/navigation" );
 nav.menuVisible.value = 'Visible';
 
-var data = require( "assets/js/data" );
+var data = require( 'assets/js/data' );
 
 var Observable = require("FuseJS/Observable");
 

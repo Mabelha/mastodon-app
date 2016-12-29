@@ -1,12 +1,14 @@
+var Observable = require("FuseJS/Observable");
 var nav = require("assets/js/navigation");
 nav.menuVisible.value = 'Visible';
 
-var Observable = require("FuseJS/Observable");
-
 var data = require( 'assets/js/data' );
 
+var posts = Observable();
+
 function init() {
-  console.log( 'start timeline' );
+  console.log( 'start home timeline' );
+  // data.clear();
   data.init( 'home' );
 }
 

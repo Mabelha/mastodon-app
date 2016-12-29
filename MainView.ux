@@ -34,11 +34,13 @@
     <StackPanel Dock="Top" Orientation="Horizontal" Visibility="{menuVisible}" Padding="0,8,0,6" Background="#484b57">
 
       <!-- logo or back button -->
-      <Image File="assets/images/logo-mastodon.png" Width="24" Height="24" Margin="16,4,24,4" Clicked="{refreshData}">
-        <WhileTrue Value="{loading}">
-          <Spin Frequency="2" />
-        </WhileTrue>
-      </Image>
+      <Panel Clicked="{refreshData}">
+        <Image File="assets/images/logo-mastodon.png" Width="24" Height="24" Margin="16,4,24,4">
+          <WhileTrue Value="{loading}">
+            <Spin Frequency="2" />
+          </WhileTrue>
+        </Image>
+      </Panel>
 
       <!-- topmenu items -->
       <StackPanel Orientation="Horizontal">
@@ -61,7 +63,7 @@
       </StackPanel>
     </StackPanel>
 
-    <Navigator DefaultPath="splash">
+    <Navigator DefaultPath="splash" Remove="Released">
       <SplashPage ux:Template="splash" router="router" />
       <LoginPage ux:Template="login" router="router" />
       <WritePage ux:Template="write" router="router" />

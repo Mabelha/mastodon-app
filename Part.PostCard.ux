@@ -1,8 +1,17 @@
-<StackPanel ux:Class="PostCard" ux:Name="pc" Margin="0,0,0,6">
+<StackPanel ux:Class="PostCard" ux:Name="pc" Margin="0,0,0,12">
 
-  <Router ux:Dependency="router" />
+  <!-- <JavaScript File="Part.PostCard.js" /> -->
+  <JavaScript>
+    function postClicked( args ) {
+      console.log( 'post: ' + JSON.stringify( args ) );
+    }
 
-  <int ux:Property="id" />
+    module.exports = {
+      postClicked: postClicked,
+    };
+  </JavaScript>
+
+  <!-- <int ux:Property="id" />
   <string ux:Property="timesince" />
   <int ux:Property="in_reply_to_id" />
   <bool ux:Property="sensitive" />
@@ -13,7 +22,6 @@
   <bool ux:Property="isGifAvatar" />
   <object ux:Property="media_attachments" />
   <object ux:Property="content" />
-  <string ux:Property="contenttxt" />
   <int ux:Property="reblogs_count" />
   <int ux:Property="favourites_count" />
   <bool ux:Property="favourited" />
@@ -21,50 +29,70 @@
   <bool ux:Property="isReblog" />
   <string ux:Property="reblogname" />
   <bool ux:Property="show_actions" />
-  <bool ux:Property="show_dimmed" />
+  <bool ux:Property="show_dimmed" /> -->
 
-  <WhileTrue Value="{Property pc.isReblog}">
-    <DockPanel Margin="0,4,0,8">
+<!--
+
+  {"id":460490,"created_at":"2016-12-23T11:03:14.000Z","in_reply_to_id":null,"sensitive":false,"visibility":"public","account":{"id":13,"username":"maiyannah","acct":"maiyannah@community.highlandarrow.com","display_name":"Maiyannah Bishop","locked":false,"note":"Admin of the HA community • Editor-in-chief of Highland Arrow • Lead Developer of postActiv • Organizer of the openNameserver project • FSF Associate Member (as money allows) • Email: maiyannah@highlandarrow.com","url":"https://community.highlandarrow.com/maiyannah","avatar":"https://files.mastodon.social/accounts/avatars/000/000/013/original/1-original-20161210045008.jpeg?1481345438","header":"/headers/original/missing.png","followers_count":38,"following_count":2,"statuses_count":9070},"media_attachments":[],"mentions":[{"url":"http://rainbowdash.net/nerthos","acct":"nerthos@rainbowdash.net","id":5942}],"tags":[],"uri":"tag:community.highlandarrow.com,2016-12-23:noticeId=498443:objectType=comment","content":"@<a href=\"http://rainbowdash.net/user/4320\">nerthos</a> Basically, they're trying to extend the play time of the new expansions artificially, rather than expending the time and money neccesary to develop compelling content.","url":"https://community.highlandarrow.com/notice/498443","reblogs_count":0,"favourites_count":0,"reblog":null,"favourited":false,"reblogged":false}
+
+  id="{id}" timesince="{timesince}" in_reply_to_id="{in_reply_to_id}" sensitive="{sensitive}" account_username="{account.username}" account_acct="{account.acct}" account_display_name="{account.display_name}" account_avatar="{account.avatar}" isGifAvatar="{isGifAvatar}" media_attachments="{media_attachments}" content="{content}"  reblogs_count="{reblogs_count}" favourites_count="{favourites_count}" favourited="{favourited}" reblogged="{reblogged}" isReblog="{isReblog}" reblogname="{reblogname}" show_actions="True"
+-->
+
+<!--
+  <WhileTrue Value="{isReblog}">
+    <DockPanel Margin="0,8,0,0">
       <FaRepost Color="#fff" FontSize="16" Margin="36,0,0,0" Dock="Left" />
       <StackPanel Orientation="Horizontal" Margin="8,1,0,0">
-        <ParagraphText Color="#fff" FontSize="14" Value="{Property pc.reblogname}" Margin="0,0,5,0" />
+        <ParagraphText Color="#fff" FontSize="14" Value="{reblogname}" Margin="0,0,5,0" />
         <ParagraphText Color="#fff" FontSize="14">reblogged this post</ParagraphText>
       </StackPanel>
     </DockPanel>
   </WhileTrue>
+-->
 
-  <DockPanel ux:Name="dockedavatar">
+  <DockPanel>
     <Panel Height="54" Width="54" Margin="0,8,0,0" Alignment="TopLeft" Dock="Left" Clicked="{gotoUser}">
-
-      <WhileTrue Value="{isGifAvatar}">
-        <TextView Value="gif" TextColor="#fff" />
-      </WhileTrue>
-      <WhileFalse Value="{isGifAvatar}">
-        <Image ux:Name="avatarError" File="assets/images/logo-mastodon.png" Width="54" Height="54" ContentAlignment="Center" Visibility="Collapsed" Opacity="1" />
-        <Image Url="{Property pc.account_avatar}" Width="54" Height="54" StretchMode="UniformToFill" ContentAlignment="Center" MemoryPolicy="QuickUnload">
-          <WhileFailed>
-            <Change avatarError.Visibility="Visible" />
-          </WhileFailed>
-          <WhileLoading>
-            <Change avatarError.Visibility="Visible" />
-            <Change avatarError.Opacity=".3" />
-          </WhileLoading>
-        </Image>
-      </WhileFalse>
+      <Image ux:Name="avatarError" File="assets/images/logo-mastodon.png" Width="54" Height="54" ContentAlignment="Center" Visibility="Collapsed" Opacity="1" />
+      <Image Url="{account.avatar}" Width="54" Height="54" StretchMode="UniformToFill" ContentAlignment="Center">
+        <WhileFailed>
+          <Change avatarError.Visibility="Visible" />
+        </WhileFailed>
+        <WhileLoading>
+          <Change avatarError.Visibility="Visible" />
+          <Change avatarError.Opacity=".3" />
+        </WhileLoading>
+      </Image>
     </Panel>
 
     <StackPanel ux:Name="postcontent" Orientation="Vertical" Padding="8,4,8,0">
-      <!-- <Deferred> -->
-        <Grid Columns="8*,1*">
-          <StackPanel Orientation="Horizontal" ClipToBounds="True" Margin="0,0,0,2" Clicked="{gotoUser}">
-            <Text Value="{Property pc.account_acct}" FontSize="13" TextColor="#ddd" Font="Regular" />
-            <Text Value="{Property pc.account_display_name}" FontSize="13" Font="Bold" TextColor="#fff" Margin="8,0,0,0" />
-          </StackPanel>
-          <Text Value="{Property pc.timesince}" FontSize="13" TextColor="#ddd" Font="Regular" Alignment="Right" />
-        </Grid>
-        <WrapPanel Orientation="Horizontal" FlowDirection="LeftToRight" Margin="0,8,0,0" Clicked="{postClicked}" ux:Name="extended">
-          <Each Items="{Property pc.content}">
-            <Text ux:Name="word" Value="{word}" TextWrapping="Wrap" FontSize="14" TextColor="#fff" Font="Regular" Margin="0,0,2,2" LoadAsync="True">
+      <Grid Columns="8*,1*">
+        <StackPanel Orientation="Horizontal" ClipToBounds="True" Margin="0,0,0,2" Clicked="{gotoUser}">
+          <Text Value="{account.acct}" FontSize="13" TextColor="#ddd" Font="Regular" />
+          <Text Value="{account.display_name}" FontSize="13" Font="Bold" TextColor="#fff" Margin="8,0,0,0" />
+        </StackPanel>
+        <Text Value="{timesince}" FontSize="13" TextColor="#ddd" Font="Regular" Alignment="Right" />
+      </Grid>
+
+<!--
+      <Panel Margin="0,8,0,0">
+        <Text Value="{preparedContent}" TextWrapping="Wrap" FontSize="14" TextColor="#fff" Font="Regular" Clicked="{postClicked}" />
+      </Panel>
+-->
+
+      <Panel Margin="0,8,0,0" Height="80">
+        <NativeViewHost>
+          <WebView Background="#ddd" FontSize="14" Source="{content}" />
+        </NativeViewHost>
+      </Panel>
+
+<!--
+      <WrapPanel Orientation="Horizontal" FlowDirection="LeftToRight" Margin="0,8,0,0">
+        <WhileVisible Invert="True">
+          <TextView Value="{content}" TextWrapping="Wrap" FontSize="14" TextColor="#fff" Font="Regular" />
+        </WhileVisible>
+        <WhileVisible>
+          <Each Items="{preparedContent}">
+            <Text ux:Name="word" Value="{word}" TextWrapping="Wrap" FontSize="14" TextColor="#fff" Font="Regular" Margin="0,0,2,2">
               <WhileTrue Value="{clear}">
                 <Change word.Margin="0,0,800,8" />
               </WhileTrue>
@@ -74,64 +102,56 @@
               </WhileTrue>
             </Text>
           </Each>
-        </WrapPanel>
-          <!-- <WhileVisibleInScrollView>
-            <Change extended.Visibility="Visible" />
-          </WhileVisibleInScrollView> -->
+        </WhileVisible>
+      </WrapPanel>
+-->
 
-        <WhileFalse Value="{Property pc.show_dimmed}">
-          <WhileTrue Value="{sensitive}">
-            <TextView Value="This post has been marked as sensitive. This betaversion of Matodor hides the images attached." Margin="16" Font="Italic" FontSize="14" TextColor="#777" TextWrapping="Wrap" />
-          </WhileTrue>
+<!--
+      <WhileTrue Value="{sensitive}">
+        <TextView Value="This post has been marked as sensitive. This betaversion of Matodor hides the images attached." Margin="16" Font="Italic" FontSize="14" TextColor="#777" TextWrapping="Wrap" />
+      </WhileTrue>
 
-          <WhileFalse Value="{sensitive}">
-            <Each Items="{Property pc.media_attachments}">
-              <Panel ClipToBounds="true" Margin="0,12,0,0">
-                <Image ux:Name="error" File="assets/images/logo-mastodon.png" Height="160" ContentAlignment="Center" Visibility="Collapsed" />
-                <Image Height="160" Url="{preview_url}" StretchMode="UniformToFill" MemoryPolicy="QuickUnload" ContentAlignment="Center">
-                  <WhileFailed>
-                    <Change error.Visibility="Visible" />
-                  </WhileFailed>
-                </Image>
-              </Panel>
-            </Each>
-          </WhileFalse>
-        </WhileFalse>
+      <WhileFalse Value="{sensitive}">
+        <Each Items="{media_attachments}">
+          <Panel ClipToBounds="true" Margin="0,12,0,0">
+            <Image ux:Name="error" File="assets/images/logo-mastodon.png" Height="160" ContentAlignment="Center" Visibility="Collapsed" />
+            <Image Height="160" Url="{preview_url}" StretchMode="UniformToFill" MemoryPolicy="QuickUnload" ContentAlignment="Center">
+              <WhileFailed>
+                <Change error.Visibility="Visible" />
+              </WhileFailed>
+            </Image>
+          </Panel>
+        </Each>
+      </WhileFalse>
 
-        <WhileTrue Value="{Property pc.show_actions}">
-          <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
-            <FaReply Color="#777" FontSize="18" Margin="4,0,12,0">
-              <Clicked Handler="{replyToPost}" />
-            </FaReply>
-            <FaRepost ux:Name="icoreblogged" Color="#777" FontSize="18" Margin="0,0,4,0">
-              <Clicked Handler="{rePost}" />
-              <WhileTrue Value="{reblogged}">
-                <Change icoreblogged.Color="#2b90d9" />
-              </WhileTrue>
-              <WhileTrue Value="{isReposting}">
-                <Spin Frequency="2" />
-              </WhileTrue>
-            </FaRepost>
-            <Text FontSize="13" Color="#777" Font="Regular" Value="{reblogs_count}" Margin="0,0,8,0" />
-            <FaStar ux:Name="icostar" Color="#777" FontSize="18" Margin="0,0,4,0">
-              <Clicked Handler="{favouritePost}" />
-              <WhileTrue Value="{favourited}">
-                <Change icostar.Color="#2b90d9" />
-              </WhileTrue>
-              <WhileTrue Value="{isFavouriting}">
-                <Spin Frequency="2" />
-              </WhileTrue>
-            </FaStar>
-            <Text FontSize="13" Color="#777" Font="Regular" Value="{favourites_count}" Margin="0,0,8,0" />
-            <!-- <FaMore Color="#777" FontSize="16" /> -->
-          </StackPanel>
-        </WhileTrue>
+      <WhileTrue Value="{show_actions}">
+        <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+          <FaReply Color="#777" FontSize="18" Margin="4,0,12,0">
+            <Clicked Handler="{replyToPost}" />
+          </FaReply>
+          <FaRepost ux:Name="icoreblogged" Color="#777" FontSize="18" Margin="0,0,4,0">
+            <Clicked Handler="{rePost}" />
+            <WhileTrue Value="{reblogged}">
+              <Change icoreblogged.Color="#2b90d9" />
+            </WhileTrue>
+          </FaRepost>
+          <Text FontSize="13" Color="#777" Font="Regular" Value="{reblogs_count}" Margin="0,0,8,0" />
+          <FaStar ux:Name="icostar" Color="#777" FontSize="18" Margin="0,0,4,0">
+            <Clicked Handler="{favouritePost}" />
+            <WhileTrue Value="{favourited}">
+              <Change icostar.Color="#2b90d9" />
+            </WhileTrue>
+          </FaStar>
+          <Text FontSize="13" Color="#777" Font="Regular" Value="{favourites_count}" Margin="0,0,8,0" />
+        </StackPanel>
+      </WhileTrue>
 
-        <WhileTrue Value="{Property pc.show_dimmed}">
-          <Change postcontent.Opacity=".5" />
-          <Change dockedavatar.Opacity=".5" />
-        </WhileTrue>
-      <!-- </Deferred> -->
+      <WhileTrue Value="{show_dimmed}">
+        <Change postcontent.Opacity=".3" />
+      </WhileTrue>
+
+-->
+
     </StackPanel>
 
   </DockPanel>

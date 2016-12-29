@@ -108,6 +108,10 @@ function postClicked( args ) {
   console.log( 'post: ' + JSON.stringify( args.data ) );
 }
 
+function timesince() {
+  return 'now';
+}
+
 module.exports = {
   replyToPost: replyToPost,
   rePost: rePost,
@@ -116,5 +120,6 @@ module.exports = {
   isFavouriting: isFavouriting,
   gotoUser: gotoUser,
   wordClicked: wordClicked,
-  postClicked: postClicked
+  postClicked: postClicked,
+  timesince: timesince
 };
